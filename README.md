@@ -20,35 +20,61 @@ OntoCMS 嚴格遵守「一個實體對應一個模組」的規範，並將系統
 專案結構嚴格定義了技術、慣例與業務邏輯的防腐邊界，禁止隨意打破分層：
 
 ```text
-OntoCMS/
+OntoCms_net/
+├── bin/                         # Docker / bootstrap scripts
+│   ├── bootstrap-db.sh          # 顯式 DB bootstrap 入口
+│   ├── build.sh
+│   ├── up.sh
+│   ├── down.sh
+│   └── clear.sh
+│
+├── conf/                        # Docker / host / deploy 設定
+│   ├── docker/
+│   ├── dotnet/
+│   ├── iis/
+│   └── mssql/
+│
+├── document/                    # FDD、guide、SQL 與 spec source-of-truth
+│   ├── guides/
+│   ├── reference/
+│   ├── spec/
+│   └── sql/
+│
 ├── src/
+│   ├── cli/                     # 顯式 CLI command project
+│   │   ├── Bootstrap/
+│   │   ├── OntoCms.Cli.csproj
+│   │   └── Program.cs
+│   │
 │   ├── public/                    # 1. 最薄的網站入口
 │   │   ├── appsettings.json
+│   │   ├── OntoCms.Web.csproj
 │   │   ├── Program.cs             # 僅負責 host startup
 │   │   └── wwwroot/               # 對外靜態資源
 │   │
 │   ├── conventions/               # 2. 全 Repo 開發慣例與共用骨架
-│   │   ├── BaseFeed.cs            # HMVC / FORKS 的共用合約
-│   │   ├── BaseReaction.cs
-│   │   └── Attributes/            # 共用的 Route, Response, Auth 標記
+│   │   ├── Attributes/
+│   │   ├── Authorization/
+│   │   ├── HMVC/                  # BaseFeedRepository, BaseReactionController...
+│   │   ├── Responses/
+│   │   └── Routing/
 │   │
 │   ├── Modules/                   # 3. 實體擁有者 (Entity Owners)
-│   │   └── {Entity}/              # 依業務實體命名 (如 Post, Press)
+│   │   └── Option/
 │   │       ├── feed.cs            # 最小必備：實體生命週期
 │   │       ├── reaction.cs        # 視需求補：API 控制器
 │   │       ├── outfit.cs          # 視需求補：頁面路由
 │   │       ├── kit.cs             # 視需求補：領域規則
-│   │       ├── dto.cs
-│   │       └── model.cs
+│   │       └── smoke.cs           # 視需求補：冒煙測試契約
 │   │
 │   ├── infra/                     # 4. 技術基礎設施實作層
-│   │   ├── Data/                  # DB Connection, Dapper Adapter
-│   │   └── Providers/             # SMS, OAuth, Cache, Payment Client
 │   │
-│   └── theme/
-│       └── {themeName}/           # 5. 視覺主題與呈現層
+│   └── theme/                     # 5. 視覺主題與呈現層
+│       └── default/
+│           ├── frontend/
 │           ├── layouts/
-│           └── templates/
+│           ├── partials/
+│           └── assets/
 ```
 
 ### Root-level Runtime Config
@@ -79,10 +105,11 @@ OntoCMS/
 ### 🛡 資料夾防腐守則
 1.  **`src/public` 必須極薄**：只處理 Host composition。**嚴禁**放入業務邏輯、Payment 整合、Repo 慣例基底或 Theme 模板。原本習慣放在此處的自訂 Middleware 或 Filter，若屬單一實體應歸入 `Modules`，若屬全域規範應歸入 `conventions`。
 2.  **`src/conventions` 是全站架構法典**：負責定義所有模組該長什麼樣子。**嚴禁**放入具體的 MSSQL 連線、Dapper 實作或單一 Entity 的商業規則。
-3.  **`src/Modules/{Entity}` 是實體大腦**：最小化的 Entity 只需要 `feed.cs` 與對應的 Schema。Reaction、Outfit、Kit 只有在需求出現時才建立。
-4.  **`src/infra` 負責髒活與技術細節**：專心處理資料庫連線、金流 API、Redis 與外部轉接。**嚴禁**放入 BaseFeed 等 Repo 規範，也**嚴禁**越權處理 Entity 業務規則。
-5.  **`src/theme` 與 Host 脫鉤**：純粹的視覺資產。**嚴禁**包含 Controller 路由、DB 存取或 Auth/Payment 邏輯。
-6.  **`conf/docker`、`conf/iis` 與 `conf/dotnet` 只承接部署與 host 設定**：它們是 runtime config，不是應用程式邏輯層。**嚴禁**把 module rule、Dapper 邏輯或 theme 模板塞進 `conf/`。
+3.  **`src/cli` 是顯式操作命令層**：像 DB bootstrap 這類維運命令放在獨立 CLI project，由 image 一起交付，但不回流到 web startup，也不由 web project 編譯承接。
+4.  **`src/Modules/{Entity}` 是實體大腦**：最小化的 Entity 只需要 `feed.cs` 與對應的 Schema。Reaction、Outfit、Kit、Smoke 只有在需求出現時才建立。
+5.  **`src/infra` 負責髒活與技術細節**：專心處理資料庫連線、金流 API、Redis 與外部轉接。**嚴禁**放入 BaseFeed 等 Repo 規範，也**嚴禁**越權處理 Entity 業務規則。
+6.  **`src/theme` 與 Host 脫鉤**：純粹的視覺資產。**嚴禁**包含 Controller 路由、DB 存取或 Auth/Payment 邏輯。
+7.  **`conf/docker`、`conf/iis` 與 `conf/dotnet` 只承接部署與 host 設定**：它們是 runtime config，不是應用程式邏輯層。**嚴禁**把 module rule、Dapper 邏輯或 theme 模板塞進 `conf/`。
 
 ## 🚀 快速啟動與開發指南 (Quick Start & Development)
 
@@ -91,7 +118,9 @@ OntoCMS/
 *   [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) 或更新版本
 
 ### 2. 系統初始化 (Bootstrap)
-啟動專案（`docker compose --env-file .env -f conf/docker/docker-compose.yml up -d`）後，系統將自動套用 DDL 與 `init.sql`。系統採用「Zero Business Data」策略，啟動時將自動植入維持後台運作的最小 `tbl_menu`、`tbl_role` 與超級管理員等 Seed Data。
+目前 web 啟動不再自動執行資料庫 bootstrap。啟動專案後，若需要初始化或重建 DB，請明確執行 `bin/bootstrap-db.sh`，由獨立 CLI project 承接資料庫 bootstrap。
+
+目前 compose project name 應固定為 `ontocms_net`，避免和其他語言版本的 OntoCMS 容器、network、volume 名稱衝突；`bin/*.sh` 與 `conf/docker/docker-compose.yml` 也都應維持這個名稱。
 
 ### 2.1 Bin Scripts
 為了避免每次手打完整 compose 參數，專案目前提供以下包裝腳本：
@@ -108,11 +137,14 @@ OntoCMS/
 4. `bin/clear.sh`
 清除目前專案的 compose 資源（container / local image / volume / orphan）。它已收斂為專案範圍，不再影響整台機器上的其他 Docker 專案。
 
+5. `bin/bootstrap-db.sh`
+以顯式命令方式執行資料庫 bootstrap。這個腳本會透過 container 內的 `OntoCms.Cli.dll` 執行 `db:bootstrap`，而不是把 bootstrap 綁回 web startup。
+
 ### 3. 開發實務：新增一個實體 (New Entity)
 當架構決策確認需要新增 Entity 時，**最小變更路徑**如下：
 1. 撰寫與執行 `sql` (Schema DDL)。
 2. 建立 `src/Modules/{Entity}/feed.cs` 來擁有資料生命週期。
-3. *視需求*再補上 `reaction.cs` (API)、`outfit.cs` (畫面) 或 `theme templates`。
+3. *視需求*再補上 `reaction.cs` (API)、`outfit.cs` (畫面)、`kit.cs`、`smoke.cs` 或 theme templates。
 
 ### 4. 開發實務：串接外部 API (External Integration)
 若只是要串接金流、簡訊等外部服務，而**未產生新實體**時，最常變更路徑如下：

@@ -1,9 +1,9 @@
 
 # Directory Structure
 
-以下是我依你這輪所有澄清後，整理出的 OntoCms_net 最終版 Directory Structure 與責任說明。
+以下是目前 OntoCms_net repo 已落地的 Directory Structure 與責任說明。
 
-**最終版**
+**目前結構**
 ```text
 OntoCms_net/
 ├── .github/
@@ -16,6 +16,7 @@ OntoCms_net/
 │       ├── fdd-retrospective.prompt.md
 │       └── fdd-flow-llm-align.prompt.md
 ├── bin/
+│   ├── bootstrap-db.sh
 │   ├── build.sh
 │   ├── up.sh
 │   ├── down.sh
@@ -38,10 +39,6 @@ OntoCms_net/
 │   ├── guides/
 │   ├── reference/
 │   ├── sql/
-│   │   ├── init.sql
-│   │   ├── Schema.sql
-│   │   ├── Seed.sql
-│   │   └── archive/
 │   └── spec/
 │       ├── .current-spec.md
 │       ├── prompts.md
@@ -56,51 +53,41 @@ OntoCms_net/
 │   ├── mssql/
 │   └── dotnet/
 ├── src/
+│   ├── cli/
+│   │   ├── Bootstrap/
+│   │   ├── OntoCms.Cli.csproj
+│   │   └── Program.cs
 │   ├── public/
+│   │   ├── OntoCms.Web.csproj
 │   │   ├── Program.cs
 │   │   ├── appsettings.json
 │   │   ├── appsettings.Development.json
 │   │   └── wwwroot/
 │   ├── conventions/
-│   │   ├── BaseFeed.cs
-│   │   ├── BaseReaction.cs
-│   │   ├── BaseOutfit.cs
-│   │   ├── BaseKit.cs
 │   │   ├── Attributes/
-│   │   ├── Routing/
-│   │   ├── Responses/
 │   │   ├── Authorization/
-│   │   └── HMVC/
+│   │   ├── HMVC/
+│   │   ├── Responses/
+│   │   └── Routing/
 │   ├── Modules/
-│   │   ├── Post/
+│   │   ├── Option/
 │   │   │   ├── feed.cs
 │   │   │   ├── reaction.cs
 │   │   │   ├── outfit.cs
 │   │   │   ├── kit.cs
-│   │   │   ├── model.cs
-│   │   │   └── dto.cs
-│   │   ├── Menu/
-│   │   ├── Option/
-│   │   ├── Staff/
-│   │   └── Role/
+│   │   │   └── smoke.cs
+│   │   └── .gitkeep
 │   ├── infra/
-│   │   ├── Data/
-│   │   ├── Auth/
-│   │   ├── Cache/
-│   │   ├── Http/
-│   │   ├── Payments/
-│   │   └── Sql/
 │   ├── theme/
 │   │   └── default/
-│   │       ├── layouts/
-│   │       ├── partials/
+│   │       ├── _ViewImports.cshtml
+│   │       ├── _ViewStart.cshtml
+│   │       ├── assets/
 │   │       ├── frontend/
-│   │       ├── backend/
-│   │       └── assets/
+│   │       ├── layouts/
+│   │       └── partials/
 │   └── tests/
-│       ├── Unit/
-│       ├── Integration/
-│       └── Smoke/
+├── OntoCms.sln
 ├── OntoCms_net.sln
 └── README.md
 ```
@@ -117,13 +104,16 @@ OntoCms_net/
 最小新增 Entity 時，真正必要的 owner code 先收斂在 `feed.cs`。
 其他像 `reaction.cs`、`outfit.cs`、`kit.cs` 只有在需求出現時才補；而 `kit.cs` 與 `src/conventions` 都可以承接不屬於單一 CRUD 畫面的應用層邏輯。
 
-4. `src/infra` 是技術實作層。
+4. `src/cli` 是顯式操作命令層。
+它承接像資料庫 bootstrap 這類「需要時才手動執行」的 CLI 命令，與 web request path 分離，也不應回流到 `src/public`。
+
+5. `src/infra` 是技術實作層。
 它不負責 repo 的開發慣例，只負責把 MSSQL、Dapper、HTTP client、payment provider、cache、auth provider 等技術接起來。
 
-5. `src/theme/{themeName}` 是現在 theme 的對應層。
+6. `src/theme/{themeName}` 是現在 theme 的對應層。
 它對應你原本對 theme 的直覺，不應和 public host 綁在一起。
 
-6. `conf/iis` 與 `conf/dotnet` 是部署與 host 設定層。
+7. `conf/iis` 與 `conf/dotnet` 是部署與 host 設定層。
 `conf/iis` 放 IIS site / application / rewrite rule 之類的 web entrypoint 設定；`conf/dotnet` 放 ASP.NET Core host、runtime、publish / deploy 的設定樣板。它們不是 app layer，也不是 infra 實作層。
 
 **各資料夾責任**
@@ -142,13 +132,10 @@ OntoCms_net/
 
 2. `src/conventions`
 放什麼：
-- BaseFeed
-- BaseReaction
-- BaseOutfit
-- BaseKit
 - route / response / auth attribute 的 repo-wide contract
 - HMVC / FORKS 的共用骨架
-- generic module dispatch convention
+- `BaseFeedRepository`、`BaseReactionController`、`BaseOutfitController`、`BaseKit`、`BaseSmoke`
+- generic module dispatch convention 與 shared repository/controller base
 
 不放什麼：
 - MSSQL connection
@@ -157,20 +144,30 @@ OntoCms_net/
 - Redis / cache provider
 - entity-specific business rule
 
-3. `src/Modules/{Entity}`
+3. `src/cli`
+放什麼：
+- CLI project 與 command entrypoint
+- 明確手動觸發的維運命令，例如 DB bootstrap
+- 需要與 web publish 一起交付、但不該由 web project 編譯承接的工具碼
+
+不放什麼：
+- HTTP request handler
+- entity page / api route
+- theme template
+
+4. `src/Modules/{Entity}`
 放什麼：
 - `feed.cs`
 - `reaction.cs`
 - `outfit.cs`
 - `kit.cs`
-- `model.cs`
-- `dto.cs`
+- `smoke.cs`
 
 最小新增 Entity 時，至少動：
-- sql
+- `document/sql`
 - `src/Modules/{Entity}/feed.cs`
 
-4. `src/infra`
+5. `src/infra`
 放什麼：
 - DB connection / transaction
 - Dapper implementation
@@ -184,7 +181,7 @@ OntoCms_net/
 - entity owner business rule
 - theme layout
 
-5. `src/theme/{themeName}`
+6. `src/theme/{themeName}`
 放什麼：
 - layouts
 - partials
@@ -199,7 +196,7 @@ OntoCms_net/
 - auth
 - payment orchestration
 
-6. `conf/iis`
+7. `conf/iis`
 放什麼：
 - IIS site / application 設定
 - URL rewrite rule
@@ -210,7 +207,7 @@ OntoCms_net/
 - entity business logic
 - theme template
 
-7. `conf/dotnet`
+8. `conf/dotnet`
 放什麼：
 - ASP.NET Core host / runtime 設定樣板
 - publish / deploy 設定
@@ -223,7 +220,7 @@ OntoCms_net/
 
 **新增一個 Entity 時**
 最小變更：
-1. sql
+1. `document/sql`
 2. `src/Modules/{Entity}/feed.cs`
 
 視需求再補：
@@ -246,13 +243,20 @@ OntoCms_net/
 只有當你發現這次整合暴露出可重用、應升格為全 repo 規則的模式，才回寫到 `src/conventions`。
 
 **關於原本 public/Middleware 與 public/Filters**
-最終版不建議作為常駐資料夾存在。
+目前結構仍不建議作為常駐資料夾存在。
 它們的內容應拆流到三處：
 1. entity-owned 的，回 `{Entity}/outfit.cs` 或 `{Entity}/kit.cs`
 2. repo-owned convention 的，回 `src/conventions`
 3. 真正 host startup 的，只留在 `src/public/Program.cs`
 
-所以最終版的 `src/public` 刻意保持很薄。
+所以目前的 `src/public` 仍刻意保持很薄。
+
+**關於 DB bootstrap**
+目前 repo 不再把資料庫 bootstrap 掛在 web 啟動流程。
+
+1. 編譯承接位置在 `src/cli`
+2. 執行入口是 `bin/bootstrap-db.sh`
+3. `src/public/Program.cs` 只承接 web host startup，不負責 CLI command dispatch
 
 **最終命名決策總結**
 1. `public`
@@ -266,8 +270,9 @@ OntoCms_net/
 5. `theme`
 代表可切換的呈現層資產
 
-這一版最大的價值，是把你剛剛一路澄清的幾件事都固定下來了：
+這一版目前固定下來的重點是：
 - `feed.cs` 是最小 Entity owner
+- `cli` 承接顯式維運命令，不回灌到 web startup
 - `public` 要夠薄，避免意外暴露
 - `theme` 要像原本的 theme
 - `conventions` 是 repo-wide，不是只屬於 app
