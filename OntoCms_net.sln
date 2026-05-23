@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{BCB1CB12-0793-4C13-AA24-190F5FC3234E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OntoCms.Cli", "src\cli\OntoCms.Cli.csproj", "{962823A2-D57D-45F0-BF95-D21DB10D0A96}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OntoCms.Web", "src\public\OntoCms.Web.csproj", "{C48A2527-86F3-4442-8391-EA8DFACBD89A}"
 EndProject
 Global
@@ -16,12 +18,17 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{962823A2-D57D-45F0-BF95-D21DB10D0A96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{962823A2-D57D-45F0-BF95-D21DB10D0A96}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{962823A2-D57D-45F0-BF95-D21DB10D0A96}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{962823A2-D57D-45F0-BF95-D21DB10D0A96}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C48A2527-86F3-4442-8391-EA8DFACBD89A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C48A2527-86F3-4442-8391-EA8DFACBD89A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C48A2527-86F3-4442-8391-EA8DFACBD89A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C48A2527-86F3-4442-8391-EA8DFACBD89A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{962823A2-D57D-45F0-BF95-D21DB10D0A96} = {BCB1CB12-0793-4C13-AA24-190F5FC3234E}
 		{C48A2527-86F3-4442-8391-EA8DFACBD89A} = {BCB1CB12-0793-4C13-AA24-190F5FC3234E}
 	EndGlobalSection
 EndGlobal

@@ -26,36 +26,64 @@
 #### Stage 0: 基礎設施與 Walking Skeleton (環境建置)
 **目標**：建立本機開發環境與空框架，打通「環境 ➔ DB ➔ 路由 ➔ Hello World 畫面」的最短路徑。
 *   **Task 0.1: Docker 環境搭建**
-    *   撰寫 `docker-compose.yml`，包含 `.NET 8/9 Web` 容器與 `MSSQL` 容器。
+    *   撰寫 `conf/docker/docker-compose.yml`，包含 `.NET 8/9 Web` 容器與 `MSSQL` 容器。
     *   設定本機 Port 映射與 Volume 掛載。
 *   **Task 0.2: 專案結構初始化**
     *   建立 ASP.NET Core MVC 專案，依照 F3CMS 規範建立 `Libs/`、`Modules/`、`Theme/` 資料夾。
     *   安裝核心 NuGet 套件：`Dapper`、`Microsoft.Data.SqlClient`。
 *   **Task 0.3: 資料庫 Schema 轉換與 Seeding**
-    *   撰寫 `Schema.sql`，將舊有 MySQL 型別轉換為 MSSQL (如 `DATETIME2`, `NVARCHAR(MAX)`)。
-    *   撰寫 `Seed.sql`，將舊有 `init.sql` 中的 `tbl_menu`、`tbl_option`、`tbl_role`、預設 `tbl_staff` 匯入。
-    *   於 `Program.cs` 實作啟動時自動檢查並執行 Schema/Seed 的機制。
+    *   將 `document/sql/init.sql` 與每日增量 SQL 改寫為 MSSQL 版本 (如 `DATETIME2`, `NVARCHAR(MAX)`, `IDENTITY`)。
+    *   保留 `init.sql` 內核心配置與預設資料，並確保增量 SQL 可依序落庫。
+    *   提供獨立 CLI project 與指令執行 `document/sql/*.sql` bootstrap，避免每次 web startup 自動建立或重建資料庫，也避免 production web build 承接 CLI source。
 *   **Task 0.4: 第一個 Outfit 路由驗證**
     *   建立基礎 `HomeController` (Outfit 層) 與對應的 Razor View。
-    *   從 MSSQL 讀取一筆 `tbl_option` 系統名稱並渲染於網頁上，驗證連線與 SSR 正常。
-*   **[驗收點]**：執行 `docker-compose up` 後，瀏覽器能正確渲染帶有 DB 資料的 Hello World 頁面，無編譯或連線錯誤。
+    *   從 MSSQL 讀取一筆 `tbl_option` 中 `group = page`、`name = title` 的系統名稱並渲染於網頁上，驗證連線與 SSR 正常。
+    *   驗證入口固定為首頁 `https://loc.f3cms.com:4433/`，並以 `https://loc.f3cms.com:4433/api/option/get?id=1` 作為同一筆 `tbl_option` 的 API cross-check。
+*   **[驗收點]**：先以獨立 CLI 完成 DB bootstrap，再執行 `docker compose --env-file .env -f conf/docker/docker-compose.yml up`；之後開啟 `https://loc.f3cms.com:4433/` 能正確渲染帶有 `tbl_option.page/title` 的 SSR 首頁，且 `https://loc.f3cms.com:4433/api/option/get?id=1` 可返回對應 Option 資料，無編譯或連線錯誤。
 
 #### Stage 1: 實體資料生命週期 (Feed 層核心實作)
-**目標**：封裝 Dapper，實作 OntoCMS 靈魂的 `BaseFeedRepository<T>`。
+**目標**：以 Dapper 作為第一選擇，實作 OntoCMS 靈魂的 `BaseFeedRepository<T>`，維持 SQL 為第一級公民，避免 ORM magic 模糊 owner boundary。
+
+**BaseFeedRepository<T> 預定承接函式群**：
+*   **Metadata / Table Helper**：承接 `MTB`、`MULTILANG`、主表 / `_lang` / `_meta` 的 table name helper、primary key helper。
+*   **Save Orchestration**：承接 `SaveAsync()` 主流程骨架、insert/update 分流、共通 transaction 持有，以及 `AfterSaveAsync()` hook。
+*   **Payload Normalization**：承接 `_handleColumn` 對應的欄位分流骨架，將主表欄位、`meta`、`lang` 與其他附屬資料拆開，但不在 BaseFeed 內替 entity 決定最終寫入順序。
+*   **Meta / Lang Persistence**：承接 `SaveMetaAsync()`、`SaveLangAsync()` 這類可重用的 `_meta` / `_lang` 寫入函式。
+*   **Thin Read Helpers**：承接 `OneAsync()`、`LotsAsync()`、`TotalAsync()`、`PaginateAsync()` 這類薄查詢 helper；複雜查詢維持直接 SQL。
+*   **Status / Delete Helpers**：承接 `PublishAsync()`、`ChangeStatusAsync()`、`DeleteRowAsync()` 這類單表共通操作。
+
+**不應放進 BaseFeedRepository<T> 的函式群**：
+*   `Belong.php` 類型的 `bind`、`saveMany`、`setCnt`、`lotsSub`、`byTag` 等 relation / belong 行為，不應直接上推到 FeedBase。
+*   這類函式涉及 entity-specific relation、counter、sub-table owner 規則，應留在 entity feed、module-owned helper，或未來獨立的 relation base，而不是混進共通 FeedBase。
+*   目前 repo 已新增獨立的 `BaseRelationRepository` 作為這個分流起點；後續 relation/belong 共通能力應優先往 relation base 收斂，而不是回流到 FeedBase。
 *   **Task 1.1: 介面與常數定義**
     *   定義 `IFeedRepository` 介面。
     *   實作 C# 版的 `MTB` (主表)、`MULTILANG` 屬性標記 (Attributes)。
+    *   明確定義 `BaseFeedRepository<T>` 的定位：承接共通 CRUD、共通 transaction 持有、以及主表 / `_lang` / `_meta` table metadata helper。
 *   **Task 1.2: _handleColumn 與主表 CRUD**
-    *   實作 Dapper 對主表 (Main Table) 的動態 Insert/Update 語法生成。
-    *   實作自動寫入 Audit Fields (`insert_ts`, `last_ts`, `insert_user`) 的邏輯。
+    *   第一個 slice 先落 `_handleColumn`：先把 payload 分流為主表欄位、`meta`、`lang`、`tags`，維持純記憶體 normalization，不提前接 transaction 或 DB write。
+    *   第二個 slice 再補 Dapper 對主表 (Main Table) 的動態 Insert/Update 語法生成與 Audit Fields (`insert_ts`, `last_ts`, `insert_user`, `last_user`) 寫入，先只承接主表，不提前展開 `_lang` / `_meta`。
+    *   若需要 QueryBuilder，只允許很薄的 where / order / paging 組裝；不可把整個 Feed 推向 ORM-style query abstraction。
+    *   複雜查詢維持直接寫 SQL；若 Dapper 之外需要第二選項，僅考慮 `SqlKata` 作為薄 query builder，而不是改採重型 ORM。
 *   **Task 1.3: 多語系與中繼資料關聯寫入 (_afterSave)**
     *   實作 `saveLang()`：利用 MSSQL 的 `MERGE INTO` 處理 `_lang` 表的 Upsert。
     *   實作 `saveMeta()`：處理 `_meta` 表的鍵值對寫入。
+    *   `BaseFeedRepository<T>` 只承接共通 CRUD / transaction；各 entity feed 仍必須自行決定主表、`_lang`、`_meta` 的寫入順序與 owner-side orchestration。
     *   確保 Task 1.2 與 1.3 包裝在同一個 `DbTransaction` 內。
-*   **[驗收點]**：撰寫整合測試 (Integration Test)，傳入一份包含 title (`_lang`) 與 seo_desc (`_meta`) 的 Payload，驗證 Dapper 能正確分流並寫入三張表。
+    *   `Belong.php` 類的 relation 寫入（如 `saveMany` / `bind`）不納入本階段 FeedBase；若未來需要，另立 relation helper / base 再承接。
+*   **[驗收點]**：撰寫整合測試 (Integration Test)，傳入一份包含 title (`_lang`) 與 seo_desc (`_meta`) 的 Payload，驗證 Dapper 能正確分流並寫入三張表；同時確認 `BaseFeedRepository<T>` 只提供薄共通能力，不會把 Feed 推向 Entity Framework 式 ownership 混淆。
 
 #### Stage 2: 互動與權限治理 (Reaction & Auth 層)
 **目標**：基於舊表建立 C# 權限攔截網，並實作標準的 API 回應層。
+*   **ReactionBase 預定承接函式群**：
+    *   API lifecycle hook：`BeforeReactionAsync()`、`AfterReactionAsync()`、共通 `ExecuteReactionAsync()` wrapper。
+    *   JSON envelope helper：成功 / 缺欄 / wrong-data / unverified 的共通 envelope 與 response helper。
+    *   Request normalization helper：`id`、`query` 這類 backend 常用輸入的最薄 normalize / guard helper。
+    *   Row / Save hook：`HandleRow()`、`HandleIteratee()`、`BeforeSaveAsync()` 這類可覆寫 hook，讓 entity reaction 只保留 owner-side rule。
+*   **不應放進 ReactionBase 的函式群**：
+    *   entity-specific auth policy、feed method 選擇、validation rule 定義、module reroute 規則。
+    *   `Reaction.php` 裡動態反射 module/method dispatch 的 `do_rerouter()`，不直接搬進 ASP.NET Core；路由解析維持由 framework routing 與 module controller 明確宣告。
+    *   upload / upload_file 這類檔案處理流程，先維持 module-owned 或後續獨立 upload helper，不提前 generic 化進 ReactionBase。
 *   **Task 2.1: Claim-based Auth 中介軟體**
     *   實作自訂的 `AuthenticationHandler`。
     *   讀取登入者的 `tbl_staff` 狀態與 `tbl_role` 權限代碼，轉化為 `.NET Claims`。
@@ -68,6 +96,14 @@
 
 #### Stage 3: WorkflowEngine MVP (Kit 工具層)
 **目標**：將狀態機與防禦邏輯移植為無狀態的 C# 領域服務 (Domain Service)。
+*   **KitBase 預定承接函式群**：
+    *   Rule group helper：`Rule()` 對應的 group selector、base rule fallback、以及空 rule group helper。
+    *   Rule factory helper：建立 rule group / rule set 的薄資料結構 helper，讓 entity kit 只保留模組規則內容。
+    *   Pure utility helper：`strWidth()` 這類不依賴 entity state 的純字串工具函式。
+*   **不應放進 KitBase 的函式群**：
+    *   entity-specific validation rule 定義、account uniqueness 檢查、寄信、token / login / session guard。
+    *   `modules/Staff/kit.php` 裡的 `sendInvite()`、`_notExistAccount()`、`_accountRule()`、`_isLogin()`、`_chkLogin()` 這類模組擁有規則與 side effect，不上推到共通 KitBase。
+    *   任何需要 DB、mail、session、或 module-owned workflow context 的 helper，都維持 entity kit 或後續專屬 service，不提前 generic 化。
 *   **Task 3.1: JSON Definition 載入與驗證**
     *   於 `Libs/` 實作 `WorkflowEngine` 類別，能反序列化並驗證目標流程 JSON (如 `flow.json`)。
 *   **Task 3.2: 狀態防護與權限判定 (Guard)**
@@ -78,18 +114,36 @@
 
 #### Stage 4: 頁面渲染與後台選單 (Outfit 層)
 **目標**：結合 Seed Data 產出動態生成的後台/前台框架。
+*   **OutfitBase 預定承接函式群**：
+    *   Route lifecycle hook：`BeforeRouteAsync()`、`AfterRouteAsync()`、共通 `ExecuteOutfitAsync()` wrapper。
+    *   Theme render helper：theme view path 組裝與共通 `ThemeView()`。
+    *   Breadcrumb / formatter helper：breadcrumb 組裝、breadcrumb 字串輸出、date/duration/slug/url/join 這類純格式函式。
+*   **不應放進 OutfitBase 的函式群**：
+    *   entity-specific query、SEO 內容決策、頁面資料組裝、module-owned reroute 規則。
+    *   `Outfit.php` 裡偏 runtime / deployment 的 static cache、XML/XLS header、特殊輸出流程，不在目前最小 OutfitBase slice 內承接。
 *   **Task 4.1: 動態選單渲染**
     *   在 `Outfit` (Razor View Component 或 ViewComponent) 讀取 `tbl_menu` 的資料，遞迴渲染出後台左側導覽列。
 *   **Task 4.2: 多語系與系統選項載入**
     *   讀取 `tbl_option` 載入全站共用變數 (如網站名稱、Logo 路徑)。
 *   **[驗收點]**：啟動站臺後，Razor SSR 畫面能正確顯示 `init.sql` 中定義的選單與系統名稱。
 
+#### Stage 5: Smoke Contract 與最小驗證面
+**目標**：建立最薄的 smoke contract dispatch，使 smoke scenario 能維持 module-owned，但不重複實作 surface/contract routing。
+*   **SmokeBase 預定承接函式群**：
+    *   Contract dispatch：`Run()` 對應 surface/contract 到實際 smoke method。
+    *   Method map helper：建立 surface/contract map 的薄 helper，避免各 entity 重複組字典。
+    *   Contract exception：`surface_not_found`、`contract_not_found`、`invalid_smoke_contract` 這類共通 smoke contract 錯誤。
+*   **不應放進 SmokeBase 的函式群**：
+    *   entity-specific DB bootstrap、seed、assertion、cleanup。
+    *   `modules/Mobile/smoke.php` 裡的 `runRequestCreateOrEnsure()` 這類模組專屬 scenario、資料準備與結果驗證，不上推到共通 SmokeBase。
+    *   任何需要 feed/reaction/module side effect 的 smoke 流程，都維持 entity smoke 擁有。
+
 ---
 
 ### Entry / Exit Criteria for (done)
 *   **Entry Criteria (開始實作前提)**：
     *   開發者已詳閱本 `plan.md` 與對應的 `idea.md` (v3)。
-    *   Docker Desktop 與 .NET 8/9 SDK 已安裝就緒。
+    *   Docker Desktop 與 `docker compose` 已安裝就緒；若 host 缺少 `.NET SDK`，可改以 Docker SDK 容器作為建立與驗證路徑。
 *   **Exit Criteria (宣告階段完成標準)**：
     *   該 Stage 的程式碼已提交 (Commit)，並通過上述的 **[驗收點]**。
     *   產生對應的 SQL 或架構變更時，必須維持 F3CMS 的小寫底線 (`tbl_`) 命名規範。

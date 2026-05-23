@@ -1,3 +1,5 @@
+name: ontocms_net
+
 services:
   web:
     build:
@@ -8,10 +10,13 @@ services:
         condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: ${ONTOCMS_APP_ENV}
-      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_URLS: http://+:8080;https://+:8443
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /https/loc.f3cms.com.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${ONTOCMS_DEV_CERT_PASSWORD}
       ConnectionStrings__DefaultConnection: Server=${ONTOCMS_DB_HOST},1433;Database=${ONTOCMS_DB_NAME};User Id=${ONTOCMS_DB_USER};Password=${ONTOCMS_DB_PASSWORD};TrustServerCertificate=True
     ports:
       - ${ONTOCMS_HTTP_PORT}:8080
+      - 4433:8443
     restart: unless-stopped
 
   db:

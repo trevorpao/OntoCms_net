@@ -1,8 +1,11 @@
-#!/bin/bash
-docker rm -f $(docker ps -a -q);
+#!/usr/bin/env bash
 
-docker rmi -f $(docker images -a -q);
+set -euo pipefail
 
-docker volume rm $(docker volume ls -q);
+CU_DIR="$(cd "$(dirname "$0")" && cd ../ && pwd)"
+ENV_FILE="$CU_DIR/.env"
+COMPOSE_FILE="$CU_DIR/conf/docker/docker-compose.yml"
+PROJECT_NAME="ontocms_net"
 
-docker network rm $(docker network ls | tail -n+2 | awk '{if($2 !~ /bridge|none|host/){ print $1 }}');
+docker compose --project-name "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" down --rmi local --volumes --remove-orphans
+docker compose --project-name "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps

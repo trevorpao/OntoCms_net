@@ -12,8 +12,22 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\conventions\**\*.cs">
+      <Link>conventions\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Compile>
+    <Compile Include="..\Modules\**\*.cs">
+      <Link>Modules\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="..\..\document\sql\*.sql">
       <Link>sql\%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="..\theme\default\**\*.cshtml">
+      <Link>theme\default\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>

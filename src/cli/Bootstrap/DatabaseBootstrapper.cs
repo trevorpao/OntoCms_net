@@ -1,8 +1,10 @@
 using System.Text;
 using Dapper;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
-namespace OntoCms.Web.Bootstrap;
+namespace OntoCms.Cli.Bootstrap;
 
 internal static class DatabaseBootstrapper
 {
@@ -18,7 +20,7 @@ internal static class DatabaseBootstrapper
             return;
         }
 
-        var sqlDirectory = Path.Combine(AppContext.BaseDirectory, "sql");
+        var sqlDirectory = ResolveSqlDirectory();
         if (!Directory.Exists(sqlDirectory))
         {
             logger.LogWarning("Skipping DB bootstrap because SQL directory was not published: {SqlDirectory}", sqlDirectory);
@@ -105,6 +107,18 @@ END;
             .EnumerateFiles(sqlDirectory, "*.sql", SearchOption.TopDirectoryOnly)
             .OrderBy(path => Path.GetFileName(path).Equals("init.sql", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
             .ThenBy(path => Path.GetFileName(path), StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string ResolveSqlDirectory()
+    {
+        var localSqlDirectory = Path.Combine(AppContext.BaseDirectory, "sql");
+        if (Directory.Exists(localSqlDirectory))
+        {
+            return localSqlDirectory;
+        }
+
+        var siblingSqlDirectory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "sql"));
+        return siblingSqlDirectory;
     }
 
     private static IEnumerable<string> SplitSqlBatches(string script)

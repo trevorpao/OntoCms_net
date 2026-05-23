@@ -42,7 +42,7 @@
 ### 7. 資料與狀態影響 (Data and State Implications)
 *   **Schema 轉換不變性**：維持原有的 `tbl_` 前綴、小寫底線命名慣例（例：`tbl_post_lang`）。
 *   **時間戳記與稽核 (Audit)**：所有寫入操作統一透過 C# 的 `DateTime.UtcNow` 對應至 MSSQL 的 `DATETIME2`，寫入 `insert_ts` 與 `last_ts`。
-*   **啟動依賴 (Bootstrap Dependency)**：系統首次啟動高度依賴 `init.sql` 轉移的 `tbl_menu` 與 `tbl_option` 結構，此為 UI 渲染與系統參數的真實來源。
+*   **初始化依賴 (Bootstrap Dependency)**：系統可用前高度依賴 `init.sql` 轉移的 `tbl_menu` 與 `tbl_option` 結構，此為 UI 渲染與系統參數的真實來源；但 DB bootstrap 改由明確 CLI 指令觸發，而不是每次 web startup 自動執行。
 
 ### 8. 限制與依賴 (Constraints and Dependencies)
 *   **基礎設施**：需運行於支援 .NET 8/9 的容器或伺服器，並連線至 Microsoft SQL Server。
@@ -71,6 +71,13 @@
 *   **When (當)** 該帳號透過前端呼叫 `Reaction` 層的 `/api/post/update` 路由。
 *   **Then (那麼)** ASP.NET Core 的 Auth Middleware 應在讀取 User Claims 後，於進入 Controller 前直接攔截請求。
 *   **And (並且)** 系統回傳 HTTP 403 Forbidden，確保未授權的操作絕對無法觸及 `Feed` 層。
+
+**【情境三】Walking Skeleton 首頁與 Option API 對齊驗證**
+*說明：驗證目前 Stage 0 的最小外部可見路徑已經對齊既定入口，首頁與 API 都以同一筆 `tbl_option` 站台標題為真實來源*。
+*   **Given (假設)** 系統已透過明確 CLI 完成 DB bootstrap，且 `tbl_option` 內存在 `group = page`、`name = title` 的設定值。
+*   **When (當)** 使用者開啟首頁 `https://loc.f3cms.com:4433/`。
+*   **Then (那麼)** SSR 首頁應顯示來自 `tbl_option` 中 `group = page`、`name = title` 的站台名稱，而不是 MVC template 預設字串。
+*   **And (並且)** 以 `https://loc.f3cms.com:4433/api/option/get?id=1` 驗證時，返回結果中的 `content` 應能對應同一筆站台名稱，作為首頁顯示的 API side cross-check。
 
 ---
 

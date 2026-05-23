@@ -1,11 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-CU_DIR="$( cd "$( dirname "$0" )" && cd ../ && pwd )";
+set -euo pipefail
 
-export $(egrep -v '^#' $CU_DIR/.env | xargs);
+CU_DIR="$(cd "$(dirname "$0")" && cd ../ && pwd)"
+ENV_FILE="$CU_DIR/.env"
+COMPOSE_FILE="$CU_DIR/conf/docker/docker-compose.yml"
+PROJECT_NAME="ontocms_net"
 
-docker kill $(docker ps -q)
-
-docker-compose -p $APP_NAME --file $CU_DIR/docker-compose.yml up -d
-
-docker ps
+docker compose --project-name "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d
+docker compose --project-name "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps

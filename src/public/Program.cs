@@ -1,13 +1,16 @@
-using OntoCms.Web.Bootstrap;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews()
+    .AddRazorOptions(options =>
+    {
+        options.ViewLocationFormats.Insert(0, "/theme/default/frontend/{1}/{0}.cshtml");
+        options.ViewLocationFormats.Insert(1, "/theme/default/frontend/Shared/{0}.cshtml");
+    });
+
+builder.Services.AddScoped<OntoCms.Modules.Option.OptionFeed>();
 
 var app = builder.Build();
-
-await DatabaseBootstrapper.InitializeAsync(app.Configuration, app.Logger);
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -22,6 +25,8 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.UseAuthorization();
+
+app.MapControllers();
 
 app.MapControllerRoute(
     name: "default",
