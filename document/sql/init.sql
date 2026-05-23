@@ -980,7 +980,7 @@ CREATE TABLE [dbo].[tbl_meta_tag] (
     [meta_id] INT NOT NULL,
     [tag_id] INT NOT NULL,
     [sorter] INT NOT NULL DEFAULT 0,
-    PRIMARY KEY ([meta_id],[tag_id]) USING BTREE
+    PRIMARY KEY ([meta_id],[tag_id])
 );
 END;
 
@@ -1112,7 +1112,7 @@ INSERT INTO [dbo].[tbl_post_lang] ([id], [from_ai], [lang], [parent_id], [title]
 (14, N'No', N'jp', 376, N'お問い合わせ', N'<p>恐れ入りますが、基本情報とご相談内容をお知らせください。ご連絡をいただき次第、担当者が迅速に対応いたします！</p><p>また、メールでのご連絡をご希望の場合は、 hello@sense-info.co までお送りください。個人情報保護に関するご質問は、 pims@sense-info.co へもご連絡いただけます。</p>', N'2025-07-11 04:07:20', 1, N'2025-07-06 14:24:39', 1),
 (15, N'No', N'ko', 376, N'연락처', N'<p>귀하의 기본 정보와 문의 내용을 남겨 주시면, 귀하의 피드백을 받은 후 최대한 신속하게 담당자가 연락드리겠습니다!</p><p>저희에게 이메일을 보내고 싶다면 hello@sense-info.co 로 보내 주세요. 개인정보 보안 관련 문의는 pims@sense-info.co 로도 보내실 수 있습니다.</p>', N'2025-07-11 04:07:20', 1, N'2025-07-06 14:24:39', 1),
 (17, N'No', N'tw', 378, N'關於本區', N'', N'2025-08-26 01:11:07', 1, N'2025-08-26 01:11:07', 1),
-(17, N'No', N'en', 378, N'關於本區', N'', N'2025-08-26 01:11:07', 1, N'2025-08-26 01:11:07', 1),
+(16, N'No', N'en', 378, N'關於本區', N'', N'2025-08-26 01:11:07', 1, N'2025-08-26 01:11:07', 1),
 (18, N'No', N'ja', 378, N'關於本區', N'', N'2025-08-26 01:11:07', 1, N'2025-08-26 01:11:07', 1),
 (19, N'No', N'ko', 378, N'關於本區', N'', N'2025-08-26 01:11:07', 1, N'2025-08-26 01:11:07', 1);
 SET IDENTITY_INSERT [dbo].[tbl_post_lang] OFF;
@@ -1201,7 +1201,7 @@ CREATE TABLE [dbo].[tbl_press_author] (
     [press_id] INT NOT NULL,
     [author_id] INT NOT NULL,
     [sorter] INT NOT NULL DEFAULT 0,
-    PRIMARY KEY ([press_id],[author_id]) USING BTREE
+    PRIMARY KEY ([press_id],[author_id])
 );
 END;
 
@@ -1655,4 +1655,3 @@ CREATE TABLE [dbo].[tbl_tag_related] (
 );
 END;
 
-COMMIT;

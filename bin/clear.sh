@@ -1,10 +1,8 @@
-#!/usr/bin/env bash
+#!/bin/bash
+docker rm -f $(docker ps -a -q);
 
-set -euo pipefail
+docker rmi -f $(docker images -a -q);
 
-CU_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-ENV_FILE="$CU_DIR/.env"
-COMPOSE_FILE="$CU_DIR/conf/docker/docker-compose.yml"
+docker volume rm $(docker volume ls -q);
 
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" down --rmi local --volumes --remove-orphans
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps
+docker network rm $(docker network ls | tail -n+2 | awk '{if($2 !~ /bridge|none|host/){ print $1 }}');

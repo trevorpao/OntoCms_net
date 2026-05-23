@@ -11,6 +11,7 @@ RUN dotnet publish src/public/OntoCms.Web.csproj -c Release -o /app/publish /p:U
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
+COPY --from=build /src/document/sql ./sql
 
 EXPOSE 8080
 

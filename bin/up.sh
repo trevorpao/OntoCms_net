@@ -1,10 +1,11 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-set -euo pipefail
+CU_DIR="$( cd "$( dirname "$0" )" && cd ../ && pwd )";
 
-CU_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-ENV_FILE="$CU_DIR/.env"
-COMPOSE_FILE="$CU_DIR/conf/docker/docker-compose.yml"
+export $(egrep -v '^#' $CU_DIR/.env | xargs);
 
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps
+docker kill $(docker ps -q)
+
+docker-compose -p $APP_NAME --file $CU_DIR/docker-compose.yml up -d
+
+docker ps

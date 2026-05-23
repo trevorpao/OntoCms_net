@@ -1,9 +1,13 @@
+using OntoCms.Web.Bootstrap;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
+
+await DatabaseBootstrapper.InitializeAsync(app.Configuration, app.Logger);
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
