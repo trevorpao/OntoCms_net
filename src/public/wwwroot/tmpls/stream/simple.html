@@ -1,0 +1,68 @@
+
+<nav class="level">
+  <div class="level-left"><h1 class="module-title title is-2">服務歷程</h1> <p class="desc">前後台重要操作記錄</p></div>
+  <div class="level-right">
+    <p class="level-item"></p>
+  </div>
+</nav>
+
+<nav class="list-filter level">
+  <div class="level-left">
+    <div class="level-item query-box">
+      <p class="control">
+        <div class="select" >
+          <select name="query" class="gee" data-gene="change:checkOption">
+            <optgroup label="服務歷程">
+              <option value="content~">內容</option>
+            </optgroup>
+          </select>
+        </div>
+      </p>
+    </div>
+    <div class="level-item">
+      <div class="field has-addons">
+        <p class="control">
+          <input class="input" type="text" placeholder="Find a option">
+        </p>
+        <p class="control">
+          <button class="button is-expanded gee" data-gene="init:initQueryForm,click:combineQuery" type="button">查詢</button>
+        </p>
+      </div>
+    </div>
+    <p class="level-item is-hidden">搜尋條件：</p>
+    <div class="tags js-query-list level-item"></div>
+  </div>
+</nav>
+<div class="columns is-multiline">
+  <div class="column is-10 is-offset-1">
+    <div class="content box-shadow is-scrollable">
+      <!-- LIST -->
+      <table class="list-body table is-striped is-hoverable">
+        <thead>
+          <tr>
+            <th style="width: 120px;">類型</th>
+            <th style="width: 200px;">操作人</th>
+            <th style="width: 200px;">操作時間</th>
+            <th>內容</th>
+            <th style="width: 120px;">狀態</th>
+          </tr>
+        </thead>
+        <tfoot></tfoot>
+        <tbody class="gee" data-gene="init:loadList,click:reactList" data-tmpl="streamBasList" data-nopde="1" data-limit="50">
+          <tr>
+            <td>{{:prop.target}}</td>
+            <td>{{:prop.account}}({{:prop.staff}})</td>
+            <td>{{:prop.insert_ts}}</td>
+            <td>{{:prop.content}}</td>
+            <td>{{:~txtLabel(prop.status, {'Enabled': '啟用', 'Disabled': '未啟用'})}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="list-footer level"><div class="level-left">
+        <span class="total-items level-item"></span>
+        <nav class="pagination level-item"><ul id="paginate"></ul></nav>
+    </div></div>
+  </div>
+</div>

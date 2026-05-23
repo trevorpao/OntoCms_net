@@ -1,0 +1,129 @@
+<nav class="level">
+  <div class="level-left"><h1 class="module-title title is-2">文章</h1> <p class="desc">各類文章管理頁面</p></div>
+  <div class="level-right">
+    <p class="level-item">
+      <a class="button is-primary engrossed-btn gee" data-gene="click:press.loadRow" data-tmpl="pressForm" data-src="editor" data-size="lg" data-id="0" data-module="press">新增文章</a>
+    </p>
+  </div>
+</nav>
+<nav class="list-filter level">
+  <div class="level-left">
+    <div class="level-item">
+      <div class="control">
+        <div class="select">
+          <select class="dropdownQuery gee" data-gene="change:dropdownQuery">
+            <option value="">全部狀態</option>
+            <option value="m.status=Published">已發佈</option>
+            <option value="m.status=Draft">草稿</option>
+            <option value="m.status=Scheduled">排程中</option>
+            <option value="m.status=Offlined">已下架</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="level-item query-box">
+      <p class="control">
+        <div class="select" >
+          <select name="query" class="gee" data-gene="change:checkOption">
+            <optgroup label="資料">
+              <option value="l.title~">文章標題</option>
+              <option value="l.content~">文章內文</option>
+              <option value="m.id:">文章編號</option>
+              <option value="tag:">標籤</option>
+              <option value="author:">作者</option>
+            </optgroup>
+            <!-- <optgroup label="狀態">
+                <option value="m.status=Published">已發佈</option>
+                <option value="m.status=Draft">草稿</option>
+                <option value="m.status=Scheduled">排程中</option>
+                <option value="m.status=Offlined">已下架</option>
+            </optgroup> -->
+          </select>
+        </div>
+      </p>
+    </div>
+    <div class="level-item">
+      <div class="field has-addons">
+        <p class="control">
+          <input class="input" type="text" placeholder="Find a option">
+        </p>
+        <p class="control">
+          <button class="button is-expanded gee" data-gene="init:initQueryForm,click:combineQuery" type="button">查詢</button>
+        </p>
+      </div>
+    </div>
+    <p class="level-item is-hidden">搜尋條件：</p>
+    <div class="tags js-query-list level-item"></div>
+  </div>
+</nav>
+<div class="columns is-multiline">
+  <div class="column b-table">
+    <div class="content box-shadow table-wrapper has-mobile-cards">
+      <table class="list-body table is-striped is-hoverable">
+        <thead>
+          <tr>
+            <th>首圖</th>
+            <th>文章標題 / 作者 / 上線時間</th>
+            <th>建立者</th>
+            <th>分類</th>
+          </tr>
+        </thead>
+        <tfoot></tfoot>
+        <tbody class="gee" data-gene="init:loadList,click:reactList" data-tmpl="pressList" data-nopde="1">
+          <tr>
+            <td><figure class="image is-marginless"> <img pre-src="{{:~loadPic(prop.cover, 'sm')}}" onerror="app.defaultPic()" > </figure></td>
+            <td>
+              <div>
+                <a href="javascript:;" data-func="press.loadRow" data-tmpl="pressForm" data-src="editor" data-id="{{:prop.id}}" class="line-clamp press-title engrossed-btn" title="{{:prop.title}}">#{{:prop.id}} {{:prop.title}} <span class="icon"><i class="fa fa-pencil"></i></span></a>
+              </div>
+              <div>
+                {{props prop.authors}}
+                  {{if #getIndex() != 0 }} & {{/if}}
+                  <a href="javascript:;" data-func="loadQuery" data-query="author:{{:prop.id}}" data-mode="Add" class="author-id"> {{:prop.title}} <!-- ({{:prop.role}}) --> </a>
+                {{/props}}
+              </div>
+              <div>{{:~formatDate(prop.online_date, 'YY-MM-DD HH:mm')}}
+                <span class="tag {{if prop.status == 'Offlined' || prop.status == 'Draft' }}is-warning{{else}}is-success{{/if}}">{{:prop.status}}</span>
+                {{if prop.status == 'Published' }}
+                <a href="{{:~fixLink('p/'+prop.id+'/'+prop.slug)}}" target="_blank" class="is-pulled-right"> <span class="icon"><i class="fa fa-share-square-o"></i></span> </a>
+                {{else}}
+                <a href="{{:~fixLink('tw/preview/p/'+prop.id)}}" target="_blank" class="is-pulled-right"> <span class="icon"><i class="fa fa-share-square-o"></i></span> </a>
+                {{/if}}
+              </div>
+            </td>
+            <td class="is-hidden-mobile"><div class="ellipsis" style=" width: 70px;">{{:prop.account}}</span></div></td>
+            <td>
+              <div class="tags"> <span class="tag is-warning"> {{:prop.category}} </span> {{props prop.tags}} <span class="tag is-info"> {{:prop.title}} </span> {{/props}} </div>
+              <nav class="navbar is-right is-transparent" role="navigation" aria-label="dropdown navigation">
+                <div class="navbar-item has-dropdown has-dropdown-up is-hoverable">
+                  <a class="navbar-link is-arrowless"><span class="icon"><i class="fa fa-cog"></i></span></a>
+
+                  <div class="navbar-dropdown is-boxed is-right is-arrow">
+                    <!-- <a class="navbar-item" href="javascript:;"
+                data-func="arena/touch" data-confirm="建立社群貼文？ 點擊【確定】後請至草稿頁查看!!"
+                data-endpoint="draft/adv" data-params='{"pid":"{{:prop.id}}"}'> 行銷助手 </a> -->
+                    <a class="navbar-item" href="javascript:;"
+                data-func="arena/touch" data-confirm="建文章廣告？ 點擊【確定】後請至廣告頁完成設定!!"
+                data-endpoint="adv/push" data-params='{"pid":"{{:prop.id}}"}'> 廣告推播 </a>
+                    <a class="navbar-item" href="javascript:;"
+                data-func="arena/touch" data-confirm="建立 SEO 草稿？ 點擊【確定】後請至草稿頁查看!!"
+                data-endpoint="draft/genSeo" data-params='{"pid":"{{:prop.id}}"}'> SEO 助手 </a>
+                    <a class="navbar-item" href="javascript:;"
+                data-func="arena/touch" data-confirm="建立翻譯草稿？ 點擊【確定】後請至草稿頁查看!!"
+                data-endpoint="draft/genI18n" data-params='{"pid":"{{:prop.id}}","original":"tw"}'> 翻譯助手 </a>
+                  </div>
+                </div>
+              </nav>
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+    <div class="list-footer level"><div class="level-left">
+        <span class="total-items level-item"></span>
+        <nav class="pagination level-item"><ul id="paginate"></ul></nav>
+    </div></div>
+  </div>
+</div>

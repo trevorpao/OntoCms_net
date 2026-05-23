@@ -1,0 +1,149 @@
+<div class="modal-box">
+  <form class="gee" data-gene="init:initForm" data-tmpl="draftForm" id="draftForm">
+
+    <div class="modal-header">
+      <h2 class="module-title">修改任務</h2>
+      <p class="desc"></p>
+    </div>
+
+    <div class="tabs-content box" >
+      <div class="tab-box" title="基本資訊">
+        <div class="columns">
+          <div class="column">
+            <div class="field">
+              <label class="label">LLM 功能</label>
+              <p class="control">
+                <input class="input" type="text" name="method" readonly placeholder="LLM 功能">
+              </p>
+            </div>
+            <div class="field">
+              <label class="label">負責人</label>
+              <div class="control is-block">
+                <input type="text" class="multipleSelect" name="owner_id" placeholder="請輸入字詞查詢" data-url='staff/get_opts' />
+              </div>
+            </div>
+            <div class="field">
+              <label class="label">AI 呼叫 ID</label>
+              <p class="control">
+                <input class="input" type="text" name="request_id" readonly placeholder="AI 呼叫 ID">
+              </p>
+            </div>
+          </div>
+          <div class="column">
+            <div class="field">
+              <label class="label">語系</label>
+              <p class="control">
+                <input class="input" type="text" name="lang" readonly placeholder="語系">
+              </p>
+            </div>
+            <div class="field">
+              <label class="label">關連文章</label>
+              <div class="control is-block">
+                <input type="text" class="multipleSelect" name="press_id" placeholder="請輸入字詞查詢" data-url='press/get_opts' />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">意圖</label>
+          <p class="control">
+            <textarea class="textarea" placeholder="意圖" name="intent" readonly></textarea>
+          </p>
+        </div>
+        <div class="field">
+          <input type="radio" class="is-checkradio" name="status" value="New" checked="checked" id="draft-status-new">
+          <label class="radio" for="draft-status-new">新任務</label>
+          <input type="radio" class="is-checkradio" name="status" value="Waiting" id="draft-status-waiting">
+          <label class="radio" for="draft-status-waiting">等待中</label>
+          <input type="radio" class="is-checkradio" name="status" value="Done" id="draft-status-done">
+          <label class="radio" for="draft-status-done">已完成</label>
+          <input type="radio" class="is-checkradio" name="status" value="Used" id="draft-status-used">
+          <label class="radio" for="draft-status-used">已套用</label>
+          <input type="radio" class="is-checkradio" name="status" value="Invalid" id="draft-status-invalid">
+          <label class="radio" for="draft-status-invalid">無效</label>
+        </div>
+      </div>
+      <div class="tab-box" title="指引/原文">
+        <div class="field">
+          <gee:md-editor data-param="guideline" readonly></gee:md-editor>
+          <!-- <textarea class="textarea" placeholder="指導方針/原文" name="guideline" readonly></textarea> -->
+        </div>
+      </div>
+      <div class="tab-box" title="結果">
+        <div class="field">
+        {{if item.content != '' }}
+          {{if item.method == 'guideline' }}
+          <gee:md-editor data-param="content" readonly></gee:md-editor>
+          {{/if }}
+
+          {{if item.method == 'writing' }}
+          <gee:md-editor data-param="content" readonly></gee:md-editor>
+          {{/if }}
+
+          {{if item.method == 'seohelper' }}
+            {{if item.meta }}
+              <label class="label">推薦標題</label>
+              <ul class="control mb-3">
+              {{for item.meta.titles}}
+                <li>{{:text}}
+                </li>
+              {{/for}}
+              </ul>
+
+              <label class="label">推薦 Hashtag</label>
+              <ul class="control mb-3">
+              {{for item.meta.hashtags}}
+                <li>{{:text}}</li>
+              {{/for}}
+              </ul>
+
+              <label class="label">文章引言</label>
+              <p class="control mb-3">{{:item.meta.introduction}}
+
+              <button class="button is-warning pre-gee pull-right" data-gene="click:arena/touch" data-confirm="匯入文章引言？ 點擊【確定】後匯入!!"
+                data-endpoint="draft/nextstep" data-params='{"pid":"{{:item.id}}","method":"importIntro"}'>匯入</button>
+              </p>
+
+              <hr>
+
+              <label class="label">推薦大圖生成提示</label>
+              <p class="control">{{:item.meta.prompt}}</p>
+            {{else }}
+              <textarea class="textarea" placeholder="結果" name="content"></textarea>
+            {{/if }}
+          {{/if }}
+
+          {{if item.method == 'translate' }}
+          <textarea class="textarea" placeholder="結果" name="content"></textarea>
+          {{/if }}
+        {{else }}
+          <textarea class="textarea" placeholder="結果" name="content"></textarea>
+        {{/if }}
+        </div>
+      </div>
+    </div>
+
+    <input type="hidden" name="id">
+
+    <div class="tabs-footer">
+      <div class="field is-grouped">
+        <p class="control">
+          <button type="button" class="button is-primary pre-gee" data-gene="click:setRow" data-reset="1">送出</button>
+        </p>
+        <p class="control">
+          <button type="button" class="button pre-gee" data-gene="click:hideModal">取消</button>
+        </p>
+        <p class="control">
+        {{if item.method == 'guideline' }}
+          <button class="button is-warning pre-gee" data-gene="click:arena/touch" data-confirm="建立新的試稿？ 點擊【確定】後生成!!"
+            data-endpoint="draft/nextstep" data-params='{"pid":"{{:item.id}}","method":"writing"}'>產生試稿</button>
+        {{/if }}
+        {{if item.method == 'writing' }}
+          <button class="button is-warning pre-gee" data-gene="click:arena/touch" data-confirm="建立新的 SEO 文案？ 點擊【確定】後生成!!"
+            data-endpoint="draft/nextstep" data-params='{"pid":"{{:item.id}}","method":"seohelper"}'>產生 SEO 文案</button>
+        {{/if }}
+        </p>
+      </div>
+    </div>
+  </form>
+</div>

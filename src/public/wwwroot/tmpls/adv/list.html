@@ -1,0 +1,109 @@
+<nav class="level">
+  <div class="level-left"><h1 class="module-title title is-2">廣告</h1> <p class="desc">網站各個廣告版位可出現之廣告素材</p></div>
+  <div class="level-right">
+    <p class="level-item">
+      <a class="button is-warning engrossed-btn gee" data-gene="click:arena/touch" data-confirm="刪除首頁廣告快取？ 點擊【確定】後將刪除舊資料!!" data-endpoint="adv/clearCache" data-params='{"pid":"board_home"}'>更新首頁快取</a>
+    </p>
+    <p class="level-item">
+      <a class="button is-primary engrossed-btn gee" data-gene="click:press.loadRow" data-tmpl="resourceForm" data-src="editor" data-id="0">新增</a>
+    </p>
+  </div>
+</nav>
+
+<nav class="list-filter level">
+  <div class="level-left">    
+    <div class="level-item">
+      <div class="control">
+        <div class="select">
+          <select class="dropdownQuery gee" data-gene="change:dropdownQuery">
+            <option value="">全部版位</option>
+            <option value="m.position_id=6">6) 首頁首屏</option>
+            <option value="m.position_id=7">7) 首頁精選文章</option>
+            <option value="m.position_id=5">5) 首頁客戶評語(112x112)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="level-item query-box">
+      <div class="field has-addons">
+        <div class="control"><div class="select" >
+          <select name="query" class="gee" data-gene="change:checkOption">
+            <optgroup label="資料">
+              <option value="l.title~">名稱</option>
+              <option value="m.uri~">網址</option>
+              <option value="m.id:">編號</option>
+            </optgroup>
+            <optgroup label="狀態">
+                <option value="m.status=Enabled">啟用</option>
+                <option value="m.status=Disabled">未啟用</option>
+            </optgroup>
+            </optgroup>
+          </select>
+        </div></div>
+        <div class="control">
+          <input class="input" type="text" placeholder="Find a option">
+        </div>
+        <div class="control tooltip">
+          <button class="button is-expanded gee" data-gene="init:initQueryForm,click:combineQuery" type="button">查詢</button>
+          <span class="tooltip-text">可記錄最後一次查詢條件</span>
+        </div>
+      </div>
+    </div>
+    <p class="level-item is-hidden">搜尋條件：</p>
+    <div class="tags js-query-list level-item"></div>
+  </div>
+</nav>
+
+<div class="columns is-multiline">
+  <div class="column">
+    <div class="content gee" data-gene="init:loadList,click:reactList" data-tmpl="resourceList" data-nopde="1">
+      {{props data}}
+      <div class="mt-3">
+        <h3 class="title is-3 is-caps has-text-info is-capitalized">{{:prop.title}}</h3>
+        <div class="columns is-multiline">
+        {{props prop.rows}}
+          <div class="column is-3">
+            <div class="card">
+              {{if prop.cover != '' }}<div class="card-image">
+                <figure class="image is-marginless" style="max-height: 20vh; overflow: hidden;"> <img pre-src="{{:~loadPic(prop.cover, 'sm')}}" onerror="app.defaultPic()" alt="{{:prop.title}}"> </figure>
+              </div>{{/if}}
+              <div class="card-content">
+                {{:prop.title}} <a href="{{:prop.uri}}" target="_blank"><span class="icon"><i class="fa fa-share-square-o"></i></span></a> <br>
+                <p class="tooltip has-text-centered">{{:prop.weight}} / {{:prop.exposure}} / {{:prop.counter}} / {{:~average(prop.counter, prop.exposure)}}%<span class="tooltip-text">權重 / 曝光次數 / 點擊次數 / CTR</span></p>
+                <nav class="level">
+                  <div class="level-left">
+                    <div class="level-item tooltip">
+                      <small>{{:~beforeDate(prop.start_date)}} ~ {{:~beforeDate(prop.end_date)}}</small>
+                      <span class="tooltip-text">{{:~formatDate(prop.start_date, 'YYYY-MM-DD')}} ~ {{:~formatDate(prop.end_date, 'YYYY-MM-DD')}}</span>
+                    </div>
+                    <div class="level-item"><span class="tag {{if prop.status == 'Disabled' }}is-warning{{else}}is-success{{/if}}">{{:prop.status}}</div>
+                  </div>
+                  <div class="level-right">
+                    <div class="level-item">
+                      <div class="field has-addons">
+                        <p class="control">
+                          <a href="javascript:;" class="modal-btn button is-info  engrossed-btn" data-func="press.loadRow" data-tmpl="resourceForm" data-src="editor" data-id="{{:prop.id}}"> 編輯 </a>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </nav>
+              </div>
+            </div>
+          </div>
+        {{/props}}
+        </div>
+      </div>
+      {{/props}}
+
+      <div class="columns is-multiline">
+        {{props data}}{{/props}}
+      </div>
+    </div>
+
+    <div class="list-footer level"><div class="level-left">
+        <span class="total-items level-item"></span>
+        <nav class="pagination level-item"><ul id="paginate"></ul></nav>
+    </div></div>
+  </div>
+</div>

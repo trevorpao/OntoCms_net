@@ -1,0 +1,81 @@
+<nav class="level">
+  <div class="level-left">
+    <nav class="breadcrumb">
+      <ul>
+        <li> <a class="gee" href="javascript:;" data-gene="click:loadMain" data-module="dashboard" data-layout="advanced">進階</a> </li>
+        <li class="is-active"> <a>參數</a> </li>
+      </ul>
+    </nav>
+  </div>
+  <div class="level-right">
+    <p class="level-item">
+      <a class="button is-primary gee" data-gene="click:loadRow" data-tmpl="optionForm" data-id="0">新增</a>
+    </p>
+  </div>
+</nav>
+
+<div class="columns content is-multiline">
+  <div class="column is-9">
+    <div class="gee" data-gene="init:loadList,click:reactList,dblclick:reactList" data-tmpl="optionList" data-nopde="1">
+      {{props data}}
+      <h3 class="title is-3 is-caps has-text-info is-capitalized">{{:prop.title}}</h3>
+      <div class="box list-body">
+        <div class="columns is-multiline">
+        {{props prop.rows}}
+          <div class="column is-3">{{:prop.name}} 
+            <a href="javascript:;" class="is-pulled-right" data-func="loadRow" data-tmpl="optionForm" data-id="{{:prop.id}}">{{:prop.title}} <span class="icon"><i class="fa fa-pencil"></i></span></a>
+          </div>
+          <div class="column is-9 line-clamp" style="max-width: 72%;" data-func="editor.switchField" data-event="dblclick" data-pid="{{:prop.id}}" data-column="content">
+            {{if prop.content }}{{:~nl2br(prop.content)}}{{else}}<p class="empty-hit"></p>{{/if}}</div>
+        {{/props}}
+        </div>
+      </div>
+      {{/props}}
+    </div>
+  </div>
+  <div class="column is-3">
+    <div class="box">
+      <form class="gee" data-gene="init:initForm" data-tmpl="optionForm" id="optionForm">
+        <div class="field">
+          <label class="label">參數群組</label>
+          <p class="control">
+            <input class="input" name="group" type="text" placeholder="參數群組">
+          </p>
+        </div>
+        <div class="field">
+          <label class="label">名稱</label>
+          <p class="control">
+            <input class="input" name="name" type="text" placeholder="名稱">
+          </p>
+        </div>
+        <div class="field">
+          <input type="radio" class="is-checkradio" name="status" value="Enabled" id="option-status-enabled">
+          <label class="radio" for="option-status-enabled">啟用</label>
+          <input type="radio" class="is-checkradio" name="status" value="Disabled" checked="checked" id="option-status-disabled">
+          <label class="radio" for="option-status-disabled">停用</label>
+        </div>
+        <div class="field">
+          <input type="radio" class="is-checkradio" name="loader" value="Preload" id="option-loader-Preload">
+          <label class="radio" for="option-loader-Preload">預載入</label>
+          <input type="radio" class="is-checkradio" name="loader" value="Demand" checked="checked" id="option-loader-demand">
+          <label class="radio" for="option-loader-demand">手動載入</label>
+        </div>
+        <div class="field">
+          <label class="label">參數值</label>
+          <p class="control">
+            <textarea class="textarea" placeholder="參數值" name="content"></textarea>
+          </p>
+        </div>
+        <input type="hidden" name="id">
+        <div class="field is-grouped">
+          <p class="control">
+            <button type="button" class="button is-primary pre-gee" data-gene="click:setRow" data-reset="1">送出</button>
+          </p>
+          <p class="control">
+            <button type="button" class="button pre-gee" data-gene="click:cancelForm">取消</button>
+          </p>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

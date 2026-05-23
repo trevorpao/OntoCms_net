@@ -1,0 +1,123 @@
+<div class="modal-box">
+  <form class="gee" data-gene="init:initForm" data-tmpl="metaForm" id="metaForm">
+    <div class="modal-header">
+      <h2 class="module-title">{{if item.id }}修改
+        {{else}}新增{{/if}}後設欄位</h2>
+    </div>
+    <div class="columns box">
+      <div class="column">
+        <!-- <div class="field">
+          <label class="label">類型</label>
+          <p class="control">
+            <span class="select"><gee:set-option module="tag" name="tag_id" force="1"></gee:set-option></span>
+          </p>
+        </div> -->
+        <div class="field">
+          <label class="label">呈現文字</label>
+          <p class="control">
+            <input class="input" name="label" type="text" placeholder="例：影片網址">
+          </p>
+        </div>
+        <div class="field">
+          <label class="label">欄位名</label>
+          <p class="control">
+            <input class="input" name="fence" type="text" placeholder="只接受小寫英文，例：videouri">
+          </p>
+        </div>
+        <div class="field">
+          <input type="radio" class="is-checkradio" name="status" value="Enabled" id="meta-status-enabled">
+          <label class="radio" for="meta-status-enabled">啟用</label>
+          <input type="radio" class="is-checkradio" name="status" value="Disabled" checked="checked" id="meta-status-disabled">
+          <label class="radio" for="meta-status-disabled">停用</label>
+        </div>
+        <div class="field">
+          <label class="label">適用領域</label>
+          <div class="control">
+            <input type="text" multiple class="multipleSelect" name="tags" placeholder="適用類型" data-url='genus/get_opts' />
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">排序</label>
+          <p class="control">
+            <input class="input" name="sorter" type="number" placeholder="排序：預設 10">
+          </p>
+        </div>
+      </div>
+      <div class="column">
+        <div class="field">
+          <label class="label">格式</label>
+          <p class="control">
+            <input type="radio" class="is-checkradio" name="type" value="number" id="meta-type-number">
+            <label class="radio" for="meta-type-number">數字</label>
+            <!-- <input type="radio" class="is-checkradio" name="type" value="money" id="meta-type-money">
+            <label class="radio" for="meta-type-money">金額</label>
+            <input type="radio" class="is-checkradio" name="type" value="timestamp" id="meta-type-timestamp">
+            <label class="radio" for="meta-type-timestamp">時間</label> -->
+            <input type="radio" class="is-checkradio" name="type" value="text" checked="checked" id="meta-type-text">
+            <label class="radio" for="meta-type-text">文字</label>
+            <!-- <input type="radio" class="is-checkradio" name="type" value="date" id="meta-type-date">
+            <label class="radio" for="meta-type-date">日期</label>
+            <input type="radio" class="is-checkradio" name="type" value="email" id="meta-type-email">
+            <label class="radio" for="meta-type-email">Email</label>
+            <input type="radio" class="is-checkradio" name="type" value="htmlcode" id="meta-type-htmlcode">
+            <label class="radio" for="meta-type-htmlcode">圖文</label> -->
+          </p>
+        </div>
+
+        <div class="field">
+          <label class="label">輸入方式</label>
+          <p class="control">
+            <input type="radio" class="is-checkradio" name="input" value="hidden" id="meta-input-hidden">
+            <label class="radio" for="meta-input-hidden">隱藏</label>
+            <input type="radio" class="is-checkradio" name="input" value="text" checked="checked" id="meta-input-text">
+            <label class="radio" for="meta-input-text">文字</label>
+            <!-- <input type="radio" class="is-checkradio" name="input" value="email" id="meta-input-email">
+            <label class="radio" for="meta-input-email">Email</label>
+            <input type="radio" class="is-checkradio" name="input" value="date" id="meta-input-date">
+            <label class="radio" for="meta-input-date">日期</label>
+            <input type="radio" class="is-checkradio" name="input" value="datetime" id="meta-input-datetime">
+            <label class="radio" for="meta-input-datetime">日期時間</label> -->
+            <input type="radio" class="is-checkradio" name="input" value="paragraph" id="meta-input-paragraph">
+            <label class="radio" for="meta-input-paragraph">段落</label>
+            <!-- <input type="radio" class="is-checkradio" name="input" value="radio" id="meta-input-radio">
+            <label class="radio" for="meta-input-radio">單選</label>
+            <input type="radio" class="is-checkradio" name="input" value="checkbox" id="meta-input-checkbox">
+            <label class="radio" for="meta-input-checkbox">多選</label>
+            <input type="radio" class="is-checkradio" name="input" value="htmlcode" id="meta-input-htmlcode">
+            <label class="radio" for="meta-input-htmlcode">圖文</label> -->
+            <input type="radio" class="is-checkradio" name="input" value="justshow" id="meta-input-justshow">
+            <label class="radio" for="meta-input-justshow">唯讀</label>
+          </p>
+        </div>
+        <!-- <div class="field">
+          <label class="label">預設值</label>
+          <p class="control">
+            <input class="input" name="preset" type="text" placeholder="無預設值請留空">
+          </p>
+        </div> -->
+        <!-- <div class="field">
+          <label class="label">選項</label>
+          <p class="control">
+            <textarea class="textarea" name="option" placeholder=""></textarea>
+          </p>
+        </div> -->
+        <div class="field">
+          <label class="label">填寫提示</label>
+          <p class="control">
+            <textarea class="textarea" name="ps" placeholder=""></textarea>
+          </p>
+        </div>
+      </div>
+    </div>
+    <input type="hidden" name="id">
+
+    <div class="tabs-footer"><div class="field is-grouped">
+      <p class="control">
+        <button type="button" class="button is-primary pre-gee" data-gene="click:setRow">送出</button>
+      </p>
+      <p class="control">
+        <button type="button" class="button pre-gee" data-gene="click:hideModal">取消</button>
+      </p>
+    </div></div>
+  </form>
+</div>

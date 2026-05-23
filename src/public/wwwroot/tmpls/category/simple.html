@@ -1,0 +1,204 @@
+<nav class="level">
+  <div class="level-left">
+    <nav class="breadcrumb">
+      <ul>
+        <li> <a>內容管理</a> </li>
+        <li> <a class="gee" href="javascript:;" data-gene="click:loadMain" data-module="dashboard" data-layout="collections">集合管理</a> </li>
+        <li class="is-active"> <a>分類</a> </li>
+      </ul>
+    </nav>
+  </div>
+  <div class="level-right">
+    <p class="level-item">
+      <a class="button is-primary gee" data-gene="click:loadRow" data-tmpl="categoryForm" data-id="0">新增</a>
+    </p>
+  </div>
+</nav>
+<nav class="list-filter level">
+  <div class="level-left">
+    <div class="level-item query-box">
+      <p class="control">
+        <div class="select">
+          <select name="query" class="gee" data-gene="change:checkOption">
+            <optgroup label="資料">
+              <option value="name~">名稱</option>
+            </optgroup>
+            <!-- <optgroup label="群組">
+              <option value="group=press">文章分類</option>
+              <option value="group=course">課程分類</option>
+            </optgroup> -->
+            <optgroup label="狀態">
+              <option value="status=Enabled">啟用</option>
+              <option value="status=Disabled">未啟用</option>
+            </optgroup>
+          </select>
+        </div>
+      </p>
+    </div>
+    <div class="level-item">
+      <div class="field has-addons">
+        <p class="control">
+          <input class="input" type="text" placeholder="請輸入條件">
+        </p>
+        <p class="control">
+          <button class="button is-expanded gee" data-gene="init:initQueryForm,click:combineQuery" type="button">查詢</button>
+        </p>
+      </div>
+    </div>
+    <p class="level-item is-hidden">搜尋條件：</p>
+    <div class="tags js-query-list level-item"></div>
+  </div>
+</nav>
+<div class="columns is-multiline">
+  <div class="column">
+    <div class="content box-shadow is-scrollable">
+      <!-- LIST -->
+      <table class="list-body table is-striped">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>群組</th>
+            <th>狀態</th>
+            <th>名稱</th>
+            <th>描述</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tfoot></tfoot>
+        <tbody class="gee" data-gene="init:loadList,click:reactList" data-tmpl="categoryList" data-nopde="1">
+          <tr>
+            <td>{{:prop.id}}</td>
+            <td>{{:~txtLabel(prop.group, {'press': '文章分類', 'course': '課程分類'})}}</td>
+            <td><span class="tag {{if prop.status == 'Disabled' }}is-warning{{else}}is-success{{/if}}">{{:~txtLabel(prop.status, {'Disabled': '停用', 'Enabled': '啟用'})}}</span></td>
+            <td>{{:prop.title}} <br> {{:prop.slug}}
+              <a href="{{:~fixLink('category/'+prop.slug)}}" target="_blank" class="is-pulled-right"> <span class="icon"><i class="fa fa-share-square-o"></i></span> </a></td>
+            <td><div class="multiline-ellipsis" style="max-width: 35vw;">{{:prop.info}}</div></td>
+            <td>
+              <a href="javascript:;" class="button is-info" data-func="loadRow" data-tmpl="categoryForm" data-id="{{:prop.id}}">編輯</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="list-footer level">
+      <div class="level-left">
+        <span class="total-items level-item"></span>
+        <nav class="pagination level-item">
+          <ul id="paginate"></ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+  <div class="column is-3">
+    <div class="">
+      <form class="gee" data-gene="init:initForm" data-tmpl="categoryForm" id="categoryForm">
+        <div class="tabs-content box">
+          <div class="tab-box" title="基本資訊">
+            <!-- <div class="field">
+              <label class="label">群組</label>
+              <p class="control">
+                <div class="select is-fullwidth">
+                  <select name="group">
+                    <option value="press">文章分類</option>
+                    <option value="course">課程分類</option>
+                  </select>
+                </div>
+              </p>
+            </div> -->
+            <input type="hidden" name="group" data-val="press" class="static-val">
+            <div class="field">
+              <label class="label">排序</label>
+              <p class="control">
+                <input class="input" name="sorter" type="text" placeholder="預設 0 ">
+              </p>
+            </div>
+            <div class="field">
+              <label class="label">語意化網址</label>
+              <p class="control">
+                <input class="input" name="slug" type="text" placeholder="語意化可提升搜尋排名！此欄位非必填，可留空">
+              </p>
+            </div>
+            <div class="field">
+              <input type="radio" class="is-checkradio" name="status" value="Enabled" id="category-status-enabled">
+              <label class="radio" for="category-status-enabled">啟用</label>
+              <input type="radio" class="is-checkradio" name="status" value="Disabled" checked="checked" id="category-status-disabled">
+              <label class="radio" for="category-status-disabled">停用</label>
+            </div>
+            <div class="field">
+              <label class="label">分類封面</label>
+              <gee-upload module-name="category" data-param="cover" info-text="1200x675"></gee-upload>
+            </div>
+            <div class="field">
+              <label class="label">標籤</label>
+              <div class="control">
+                <input type="text" multiple class="multipleSelect" data-sortable="1" name="tags" placeholder="請輸入字詞查詢" data-url='tag/get_opts' />
+              </div>
+            </div>
+            <div class="field">
+              <label class="label">名稱</label>
+              <p class="control">
+                <input class="input" name="lang[tw][title]" type="text" placeholder="名稱" required>
+              </p>
+            </div>
+            <div class="field">
+              <label class="label">描述</label>
+              <p class="control">
+                <textarea class="textarea" name="lang[tw][info]"></textarea>
+              </p>
+            </div>
+          </div>
+          <div class="tab-box" title="英文">
+            <div class="field">
+              <label class="label">名稱</label>
+              <p class="control">
+                <input class="input" name="lang[en][title]" type="text" placeholder="名稱">
+              </p>
+            </div>
+            <div class="field">
+              <label class="label">描述</label>
+              <p class="control">
+                <textarea class="textarea" placeholder="描述" name="lang[en][info]"></textarea>
+              </p>
+            </div>
+          </div>
+          <div class="tab-box" title="日文">
+            <div class="field">
+              <label class="label">名稱</label>
+              <p class="control">
+                <input class="input" name="lang[ja][title]" type="text" placeholder="名稱">
+              </p>
+            </div>
+            <div class="field">
+              <label class="label">描述</label>
+              <p class="control">
+                <textarea class="textarea" placeholder="描述" name="lang[ja][info]"></textarea>
+              </p>
+            </div>
+          </div>
+          <div class="tab-box" title="韓文">
+            <div class="field">
+              <label class="label">名稱</label>
+              <p class="control">
+                <input class="input" name="lang[ko][title]" type="text" placeholder="名稱">
+              </p>
+            </div>
+            <div class="field">
+              <label class="label">描述</label>
+              <p class="control">
+                <textarea class="textarea" placeholder="描述" name="lang[ko][info]"></textarea>
+              </p>
+            </div>
+          </div>
+          <div class="field is-grouped">
+            <p class="control">
+              <button type="button" class="button is-primary pre-gee" data-gene="click:setRow" data-reset="1">送出</button>
+            </p>
+            <p class="control">
+              <button type="button" class="button is-link pre-gee" data-gene="click:cancelForm">取消</button>
+            </p>
+          </div>
+          <input type="hidden" name="id">
+      </form>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,66 @@
+<div class="modal-box">
+  <form class="gee" data-gene="init:initForm" data-tmpl="draftNewForm" id="draftNewForm">
+    <div class="modal-header">
+      <h2 class="module-title">新增草稿</h2>
+      <p class="desc"></p>
+    </div>
+    <div class="tabs-content box">
+      <div class="field">
+        <label class="label">LLM 功能</label>
+        <p class="control">
+          <input type="radio" class="is-checkradio" name="method" value="guideline" checked="checked" id="draft-method-guideline">
+          <label class="radio" for="draft-method-guideline">產生寫作指引</label>
+          <!-- <input type="radio" class="is-checkradio" name="method" value="expert" id="draft-method-expert">
+          <label class="radio" for="draft-method-expert">提供專家反饋</label>
+          <input type="radio" class="is-checkradio" name="method" value="layout" id="draft-method-layout">
+          <label class="radio" for="draft-method-layout">校正及排版</label> -->
+          <input type="radio" class="is-checkradio" name="method" value="translate" id="draft-method-translate">
+          <label class="radio" for="draft-method-translate">翻譯為目標語系</label>
+          <!-- <input type="radio" class="is-checkradio" name="method" value="freestyle" id="draft-method-freestyle">
+          <label class="radio" for="draft-method-freestyle">自訂</label> -->
+        </p>
+      </div>
+      <div class="field">
+        <label class="label">
+          語系 <span class="icon tooltip"><i class="fa fa-question"></i><span class="tooltip-text">僅在「翻譯」功能生效</span></span>
+        </label>
+        <p class="control">
+          <input type="radio" class="is-checkradio" name="lang" value="tw" checked="checked" id="draft-lang-tw">
+          <label class="radio" for="draft-lang-tw">中文</label>
+          <input type="radio" class="is-checkradio" name="lang" value="en" id="draft-lang-en">
+          <label class="radio" for="draft-lang-en">英文</label>
+          <input type="radio" class="is-checkradio" name="lang" value="ja" id="draft-lang-ja">
+          <label class="radio" for="draft-lang-ja">日文</label>
+          <input type="radio" class="is-checkradio" name="lang" value="ko" id="draft-lang-ko">
+          <label class="radio" for="draft-lang-ko">韓文</label>
+        </p>
+      </div>
+      <div class="field">
+        <label class="label">意圖</label>
+        <p class="control">
+          <textarea class="textarea" placeholder="意圖" name="intent"></textarea>
+        </p>
+      </div>
+      <div class="field">
+        <label class="label">
+          目標文案 <span class="icon tooltip"><i class="fa fa-question"></i><span class="tooltip-text">僅在「翻譯」及「自訂」功能時填寫。</span></span>
+        </label>
+        <p class="control">
+          <textarea class="textarea" placeholder="目標文案" name="guideline"></textarea>
+        </p>
+      </div>
+    </div>
+    <input type="hidden" class="static-val" name="status" data-val="New">
+    <input type="hidden" name="id">
+    <div class="tabs-footer">
+      <div class="field is-grouped">
+        <p class="control">
+          <button type="button" class="button is-primary pre-gee" data-gene="click:setRow" data-reset="1">送出</button>
+        </p>
+        <p class="control">
+          <button type="button" class="button pre-gee" data-gene="click:hideModal">取消</button>
+        </p>
+      </div>
+    </div>
+  </form>
+</div>

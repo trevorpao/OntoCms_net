@@ -1,0 +1,80 @@
+<nav class="level">
+  <div class="level-left"><h1 class="module-title title is-2">詞典</h1> <p class="desc">各種專業名詞及本站專有定義字詞</p></div>
+  <div class="level-right">
+    <p class="level-item">
+      <a class="button is-primary modal-btn gee" data-gene="click:showModal" data-tmpl="dictionaryForm" data-src="modal" data-size="lg" data-id="0">新增</a>
+    </p>
+  </div>
+</nav>
+
+<nav class="list-filter level">
+  <div class="level-left">
+    <div class="level-item query-box">
+      <p class="control">
+        <div class="select" >
+          <select name="query" class="gee" data-gene="change:checkOption">
+            <optgroup label="資料">
+              <option value="l.title~">標題</option>
+              <option value="m.id:">編號</option>
+              <option value="l.alias~">相關字詞</option>
+            </optgroup>
+            <optgroup label="狀態">
+                <option value="m.status=Enabled">已發佈</option>
+                <option value="m.status=Disabled">已下架</option>
+            </optgroup>
+          </select>
+        </div>
+      </p>
+    </div>
+    <div class="level-item">
+      <div class="field has-addons">
+        <p class="control">
+          <input class="input" type="text" placeholder="Find a option">
+        </p>
+        <p class="control">
+          <button class="button is-expanded gee" data-gene="init:initQueryForm,click:combineQuery" type="button">查詢</button>
+        </p>
+      </div>
+    </div>
+    <p class="level-item is-hidden">搜尋條件：</p>
+    <div class="tags js-query-list level-item"></div>
+  </div>
+</nav>
+
+<div class="columns is-multiline">
+  <div class="column is-10 is-offset-1 b-table">
+    <div class="content box-shadow table-wrapper has-mobile-cards">
+      <!-- LIST -->
+      <table class="list-body table is-striped is-hoverable">
+        <thead>
+          <tr>
+            <th>狀態</th>
+            <th>網址</th>
+            <th>標題</th>
+            <th class="is-actions-cell">操作</th>
+          </tr>
+        </thead>
+        <tfoot></tfoot>
+        <tbody class="gee" data-gene="init:loadList,click:reactList" data-tmpl="dictionaryList" data-nopde="1">
+          <tr>
+            <td data-label="狀態">{{:prop.status}}</td>
+            <td data-label="網址">{{:prop.slug}}</td>
+            <td data-label="標題">{{:prop.title}}</td>
+            <td class="is-actions-cell">
+              <a href="javascript:;" class="button is-info" data-func="loadRow" data-tmpl="dictionaryForm" data-src="modal" data-size="lg" data-id="{{:prop.id}}"> 編輯 </a>
+              <!-- <a href="javascript:;" class="button is-danger" data-func="delRow" data-id="{{:prop.id}}"> 刪除 </a> -->
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="list-footer level">
+      <div class="level-left">
+        <span class="total-items level-item"></span>
+        <nav class="pagination level-item">
+          <ul id="paginate"></ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</div>

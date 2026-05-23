@@ -1,0 +1,31 @@
+<div class="box">
+  <div class="columns">
+    <div class="column is-8">
+      <h2>Mail List</h2>
+      <div class="emails-list">
+        <label class="checkbox-inline">
+          <input type="checkbox" data-ta=".lang-all" data-gene="click:selAll" class="gee" data-nopde="1" checked /> 全選
+        </label>
+        <ul class="emails-list gee" data-gene="init:edm.loadEmails" data-tmpl="emails-list">
+          {{for items}}
+          <li class="item new"><label>
+              <input type="checkbox" class="lang-{{:lang}} lang-all" value="{{:email}}:{{:lancode}}" name="email[]" checked />
+              <span>{{:#index+1}}</span>
+              <span>{{:name}}</span> /
+              <span>{{:email}}</span> /
+              <span>{{:lancode}}</span> /
+              <span>{{:status}}</span></label>
+          </li>{{/for}}
+        </ul>
+      </div>
+    </div>
+    <div class="column">
+      <button style="position: fixed;" value="start" class="button is-primary gee" data-gene="click:edm.send" reset="1" type="button">開始發信</button>
+    </div>
+  </div>
+</div>
+<style>
+  .item.done {
+    color: #ccc;
+}
+</style>

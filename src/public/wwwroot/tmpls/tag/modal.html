@@ -1,0 +1,42 @@
+<div class="box">
+  <form class="gee" data-gene="init:initDetailForm" data-tmpl="tagDetailForm" id="tagDetailForm">
+
+    <div class="modal-header">
+    <h2 class="module-title">修改標籤進階欄位</h2> </div>
+    <div class="box">
+      <div class="field">
+        <label class="label">列表頁封面</label>
+        <gee-upload module-name="tag" data-param="cover" info-text="400x400"></gee-upload>
+      </div>
+      <div class="field">
+        <label class="label">單頁大圖</label>
+        <gee-upload module-name="tag" data-param="banner" info-text="1600x900"></gee-upload>
+      </div>
+
+      <div class="field">
+        <label class="label">標籤</label>
+        <div class="control">
+          <input type="text" multiple class="multipleSelect" data-sortable="1" name="tags" placeholder="請輸入字詞查詢" data-url='tag/get_opts' />
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">描述</label>
+        <p class="control">
+          <textarea class="textarea" placeholder="描述" name="info"></textarea>
+        </p>
+      </div>
+    </div>
+    <input type="hidden" name="id">
+    <input type="hidden" name="parent_id">
+
+    <div class="tabs-footer"><div class="field is-grouped">
+      <p class="control">
+        <button type="button" class="button is-primary pre-gee" data-gene="click:setDetailRow">送出</button>
+      </p>
+      <p class="control">
+        <button type="button" class="button pre-gee" data-gene="click:hideModal">取消</button>
+      </p>
+    </div></div>
+  </form>
+</div>

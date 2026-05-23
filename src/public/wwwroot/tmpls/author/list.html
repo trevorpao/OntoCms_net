@@ -1,0 +1,97 @@
+<nav class="level">
+  <!-- <div class="level-left"><h1 class="module-title title is-2">作者</h1> <p class="desc">文章作者管理頁面</p></div> -->
+  <div class="level-left">
+    <nav class="breadcrumb">
+      <ul>
+        <li> <a>內容管理</a> </li>
+        <li> <a class="gee" href="javascript:;" data-gene="click:loadMain" data-module="dashboard" data-layout="collections">集合管理</a> </li>
+        <li class="is-active"> <a>作者</a> </li>
+      </ul>
+    </nav>
+  </div>
+  <div class="level-right">
+    <p class="level-item">
+      <a class="button is-primary modal-btn gee" data-gene="click:showModal" data-tmpl="authorForm" data-src="modal" data-size="lg" data-id="0">新增</a>
+    </p>
+  </div>
+</nav>
+<nav class="list-filter level">
+  <div class="level-left">
+    <div class="level-item query-box">
+      <p class="control">
+        <div class="select" >
+          <select name="query" class="gee" data-gene="change:checkOption">
+            <optgroup label="資料">
+              <option value="l.title~">名稱</option>
+              <option value="m.slug~">網址</option>
+              <option value="m.id:">編號</option>
+            </optgroup>
+            <optgroup label="狀態">
+                <option value="m.status=Enabled">啟用</option>
+                <option value="m.status=Disabled">未啟用</option>
+            </optgroup>
+          </select>
+        </div>
+      </p>
+    </div>
+    <div class="level-item">
+      <div class="field has-addons">
+        <p class="control">
+          <input class="input" type="text" placeholder="Find a option">
+        </p>
+        <p class="control">
+          <button class="button is-expanded gee" data-gene="init:initQueryForm,click:combineQuery" type="button">查詢</button>
+        </p>
+      </div>
+    </div>
+    <p class="level-item is-hidden">搜尋條件：</p>
+    <div class="tags js-query-list level-item"></div>
+  </div>
+</nav>
+<div class="columns is-multiline">
+  <div class="column">
+    <div class="mb-3 gee" data-gene="init:loadList,click:reactList" data-tmpl="authorList" data-nopde="1">
+      <div class="columns is-multiline">
+        {{props data}}
+        <div class="column is-3">
+          <div class="card">
+            <div class="card-image">
+              <figure class="image is-1by1"><img class="is-rounded" src="{{:~loadPic(prop.cover, 'sm')}}" onerror="app.defaultPic()" ></figure><!-- class="is-rounded" -->
+              <!-- {{:~loadPic(prop.cover)}} -->
+            </div>
+            <div class="card-content">
+              <div class="content">{{:prop.title}}
+                <br />
+                <a href="{{:~fixLink('author/'+ prop.slug)}}" target="_blank"><small>{{:prop.slug}} ({{:prop.jobtitle}}) </small></a>
+                <nav class="level">
+                  <div class="level-left">
+                    <div class="level-item"><small>{{:~formatDate(prop.last_ts, 'YYYY-MM-DD')}}</small></div>
+                    <div class="level-item"><span class="tag {{if prop.status == 'Disabled' }}is-warning{{else}}is-success{{/if}}">{{:prop.status}}</div>
+                  </div>
+                  <div class="level-right">
+                    <div class="level-item">
+                      <div class="field has-addons">
+                        <p class="control">
+                          <a href="javascript:;" class="modal-btn button is-info" data-func="loadRow" data-tmpl="authorForm" data-src="modal" data-size="lg" data-id="{{:prop.id}}"> 編輯 </a>
+                        </p>
+                        <!-- <p class="control">
+                          <a href="javascript:;" class="button is-danger" data-func="delRow" data-id="{{:prop.id}}"> 刪除 </a>
+                        </p> -->
+                      </div>
+                    </div>
+                  </div>
+                </nav>
+              </div>
+            </div>
+          </div>
+        </div>
+        {{/props}}
+      </div>
+    </div>
+    
+    <div class="list-footer level"><div class="level-left">
+        <span class="total-items level-item"></span>
+        <nav class="pagination level-item"><ul id="paginate"></ul></nav>
+    </div></div>
+  </div>
+</div>

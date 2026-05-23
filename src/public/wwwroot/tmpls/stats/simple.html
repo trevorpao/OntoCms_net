@@ -1,0 +1,98 @@
+<nav class="level">
+  <div class="level-left"><h1 class="module-title title is-2">數據面板</h1> <p class="desc">預設為近 28 天內數據，可以設定查詢條件</p></div>
+</nav>
+
+<nav class="list-filter level">
+  <div class="level-left">
+    <div class="level-item query-box">
+      <p class="control">
+        <div class="select" >
+          <select name="query" class="gee" data-gene="change:checkOption">
+            <option value="insert_ts=28daysAgo">近 28 天</option>
+            <option value="insert_ts<>">自訂起迄</option>
+          </select>
+        </div>
+      </p>
+    </div>
+    <div class="level-item">
+      <div class="field has-addons">
+        <p class="control">
+          <input class="input" type="text" placeholder="Find a option">
+        </p>
+        <p class="control">
+          <button class="button is-expanded gee" data-gene="init:initQueryForm,click:combineQuery" type="button">查詢</button>
+        </p>
+      </div>
+    </div>
+    <p class="level-item is-hidden">搜尋條件：</p>
+    <div class="tags js-query-list level-item"></div>
+  </div>
+</nav>
+
+<div class="columns is-multiline gee" data-gene="init:loadList" data-tmpl="statsList" data-nopde="1" data-method="status">
+  <div class="column is-6">
+    <article class="message is-info">
+      <div class="message-header">
+        <p>瀏覽次數</p>
+      </div>
+      <div class="message-body">
+        <div class="chart-box mb-2 chart-line" type="line" source="date" id="line-date-state"><canvas class="chart"></canvas></div>
+        <p class="has-text-right"><a href="https://analytics.google.com/analytics/web/#/p{{:data.property_id}}/reports/explorer?params=_u..nav%3Dmaui&collectionId=user&r=all-pages-and-screens" target="_blank" >前往 GA 報表 <span class="icon"><i class="fa fa-share-square-o"></i></span> </a></p>
+      </div>
+    </article>
+  </div>
+  <div class="column is-6">
+    <article class="message is-info">
+      <div class="message-header">
+        <p>流量來源</p>
+      </div>
+      <div class="message-body">
+        <div class="chart-box mb-2 chart-bar" type="bar" source="country" id="line-country-state"><canvas class="chart"></canvas></div>
+        <p class="has-text-right"><a href="https://analytics.google.com/analytics/web/#/p{{:data.property_id}}/reports/explorer?params=_u..nav%3Dmaui&collectionId=user&r=all-pages-and-screens" target="_blank" >前往 GA 報表 <span class="icon"><i class="fa fa-share-square-o"></i></span> </a></p>
+      </div>
+    </article>
+  </div>
+  <div class="column is-3">
+    <article class="message is-info">
+      <div class="message-header">
+        <p>系統聯絡窗口</p>
+      </div>
+      <div class="message-body">
+        <ul>
+          <li>聯絡人： Trevor Pao</li>
+          <li>Line ID： trevorpao</li>
+          <li>手機： 0922-790081</li>
+          <li>Email： trevor@sense-info.co</li>
+        </ul>
+      </div>
+    </article>
+  </div>
+  <div class="column is-6">
+    <article class="message is-info">
+      <div class="message-header">
+        <p>文章草稿</p>
+      </div>
+      <div class="message-body">
+        {{props data.presses}}
+          <div>
+            <a href="/backend/cms/press/list/editor/{{:prop.id}}" class="is-pulled-right" >編輯 <span class="icon"><i class="fa fa-share-square-o"></i></span></a>
+            <div class="ellipsis">{{:prop.title}}</div>
+          </div>
+        {{/props}}
+      </div>
+    </article>
+  </div>
+  <div class="column is-3">
+    <article class="message is-info">
+      <div class="message-header">
+        <p>操作手冊</p>
+      </div>
+      <div class="message-body">
+        <ul>
+          <li>
+            <a href="https://drive.google.com/file/d/1kZcmxSye_MejZ9u2ikdwUEF9sp4Npylp/view?usp=sharing" target="_blank">後台操作手冊</a>
+          </li>
+        </ul>
+      </div>
+    </article></div>
+</div>

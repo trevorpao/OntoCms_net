@@ -1,0 +1,64 @@
+<div class="modal-box">
+  <form class="gee" data-gene="init:initForm" data-tmpl="staffForm" id="staffForm">
+    <div class="modal-header">
+      <h2 class="module-title">{{if item.id }}修改
+        {{else}}新增{{/if}}管理員</h2>
+    </div>
+
+    <div class="box">
+    <div class="field">
+      <label class="label">帳號</label>
+      <p class="control">
+        <input class="input" name="account" type="text" placeholder="帳號">
+      </p>
+    </div>
+    <div class="field">
+      <label class="label">密碼</label>
+      <p class="control">
+        <input class="password input" name="pwd" type="password" placeholder="如不變更請勿填寫" autocomplete="new-password">
+      </p>
+    </div>
+    <div class="field">
+      <label class="label">Email</label>
+      <p class="control">
+        <input class="input" name="email" type="text" placeholder="Email">
+      </p>
+    </div>
+    <div class="field">
+      <label class="label">備註</label>
+      <p class="control">
+        <input class="input" name="note" type="text" placeholder="備註">
+      </p>
+    </div>
+    <div class="field">
+      <label class="label">角色</label>
+      <p class="control">
+        <span class="select"><gee:set-option module="role" name="role_id"></gee:set-option></span>
+      </p>
+    </div>
+    <div class="field">
+      <label class="label">狀態</label>
+      <p class="control">
+        <label class="radio">
+          <input type="radio" name="status" value="New"> 新進
+        </label>
+        <label class="radio">
+          <input type="radio" name="status" value="Verified" checked="checked"> 生效
+        </label>
+        <label class="radio">
+          <input type="radio" name="status" value="Freeze"> 失效
+        </label>
+      </p>
+    </div></div>
+    <input type="hidden" name="id">
+    <div class="tabs-footer">
+    <div class="field is-grouped">
+      <p class="control">
+        <button type="button" class="button is-primary pre-gee" data-gene="click:setRow">送出</button>
+      </p>
+      <p class="control">
+        <button type="button" class="button pre-gee" data-gene="click:hideModal">取消</button>
+      </p>
+    </div></div>
+  </form>
+</div>

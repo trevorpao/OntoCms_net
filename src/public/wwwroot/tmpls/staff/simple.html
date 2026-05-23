@@ -1,0 +1,87 @@
+<nav class="level">
+  <div class="level-left"><h1 class="module-title title is-2">管理員</h1> <p class="desc">後台管理人員清單</p></div>
+  <div class="level-right">
+    <p class="level-item tooltip">
+      <a class="button is-primary modal-btn gee" data-gene="click:showModal" data-tmpl="staffForm" data-src="editor" data-size="nor" data-id="0">新增</a>
+      <span class="tooltip-text">建立新管理員</span>
+    </p>
+  </div>
+</nav>
+<nav class="list-filter level">
+  <div class="level-left">
+    <div class="level-item">
+      <div class="control">
+        <div class="select">
+          <select class="dropdownQuery gee" data-gene="change:dropdownQuery">
+            <option value="">全部狀態</option>
+                <option value="status=Verified">生效</option>
+                <option value="status=Freeze">失效</option>
+                <option value="status=New">新進人員</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="level-item query-box">
+      <div class="field has-addons">
+        <div class="control"><div class="select" >
+          <select name="query" class="gee" data-gene="change:checkOption">
+              <option value="account~">帳號</option>
+          </select>
+        </div></div>
+        <div class="control">
+          <input class="input" type="text" placeholder="Find a option">
+        </div>
+        <div class="control tooltip">
+          <button class="button is-expanded gee" data-gene="init:initQueryForm,click:combineQuery" type="button">查詢</button>
+          <span class="tooltip-text">可記錄最後一次查詢條件</span>
+        </div>
+      </div>
+    </div>
+    <p class="level-item is-hidden">搜尋條件：</p>
+    <div class="tags js-query-list level-item"></div>
+  </div>
+  <div class="level-right"></div>
+</nav>
+
+<div class="columns is-multiline">
+  <div class="column is-10 is-offset-1 b-table">
+    <div class="content box-shadow table-wrapper has-mobile-cards">
+      <table class="list-body table is-striped is-hoverable">
+        <thead>
+          <tr>
+            <th></th>
+            <th>狀態</th>
+            <th>帳號</th>
+            <th>角色</th>
+            <th>Email</th>
+            <th class="is-actions-cell">操作</th>
+          </tr>
+        </thead>
+        <tfoot></tfoot>
+        <tbody class="gee" data-gene="init:loadList,click:reactList" data-tmpl="staffList" data-nopde="1">
+          <tr>
+            <td class="is-image-cell"><p class="image is-32x32">
+                  <img class="is-rounded" pre-src="{{:~getGravatar(prop.email, 32) }}">
+                </p></td>
+            <td data-label="狀態">{{:~txtLabel(prop.status, {'Verified': '有效', 'Freeze': '凍結', 'New': '新進人員'})}}</td>
+            <td data-label="帳號">{{:prop.account}}</td>
+            <td data-label="角色">{{:prop.role}}</td>
+            <td data-label="Email">{{:prop.email}}</td>
+            <td class="is-actions-cell">
+
+              <a class="button is-danger" href="javascript:;"
+                data-func="arena/touch" data-confirm="重送認證信？ 點擊【確定】後寄出!!" data-endpoint="staff/resend" data-params='{"pid":"{{:prop.id}}"}'>重送認證信</a>
+
+              <a href="javascript:;" class="button is-info" data-func="loadRow" data-src="editor" data-tmpl="staffForm" data-id="{{:prop.id}}"> 編輯 </a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="list-footer level"><div class="level-left">
+        <span class="total-items level-item"></span>
+        <nav class="pagination level-item"><ul id="paginate"></ul></nav>
+    </div></div>
+  </div>
+</div>

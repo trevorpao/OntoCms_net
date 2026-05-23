@@ -1,0 +1,92 @@
+<nav class="level">
+  <div class="level-left">
+    <nav class="breadcrumb">
+      <ul>
+        <li> <a class="gee" href="javascript:;" data-gene="click:loadMain" data-module="dashboard" data-layout="advanced">進階</a> </li>
+        <li class="is-active"> <a>角色</a> </li>
+      </ul>
+    </nav>
+  </div>
+  <div class="level-right">
+    <p class="level-item">
+      <a class="button is-primary gee" data-gene="click:loadRow" data-tmpl="roleForm" data-id="0">新建</a>
+    </p></div>
+</nav>
+
+<div class="columns is-multiline">
+  <div class="column">
+    <div class="content box-shadow is-scrollable">
+      <!-- LIST -->
+      <table class="list-body table is-striped is-hoverable">
+        <thead>
+          <tr>
+            <th>名稱</th>
+            <th>權限</th>
+            <th>說明</th>
+            <th class="is-actions-cell">操作</th>
+          </tr>
+        </thead>
+        <tfoot></tfoot>
+        <tbody class="gee" data-gene="init:loadList,click:reactList" data-tmpl="roleList" data-nopde="1">
+          <tr>
+            <td>{{:prop.title}}</td>
+            <td>{{:prop.priv}}</td>
+            <td>{{:~nl2br(prop.info)}}</td>
+            <td class="is-icon">
+              <a href="javascript:;" data-func="loadRow" data-tmpl="roleForm" data-id="{{:prop.id}}"> <span class="icon"><i class="fa fa-edit"></i></span> </a>
+              <!-- <a href="javascript:;" data-func="delRow" data-id="{{:prop.id}}"> <span class="icon"><i class="fa fa-close"></i></span> </a> -->
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="list-footer level"><div class="level-left">
+        <span class="total-items level-item"></span>
+        <nav class="pagination level-item"><ul id="paginate"></ul></nav>
+    </div></div>
+  </div>
+
+  <div class="column is-3">
+    <div class="box">
+      <form class="gee" data-gene="init:initForm" data-tmpl="roleForm" id="roleForm">
+        <div class="field">
+          <label class="label">名稱</label>
+          <p class="control">
+            <input class="input" name="title" type="text" placeholder="名稱">
+          </p>
+        </div>
+        <div class="field">
+          <input type="radio" class="is-checkradio" name="status" value="Enabled" id="tag-status-enabled">
+          <label class="radio" for="tag-status-enabled">啟用</label>
+          <input type="radio" class="is-checkradio" name="status" value="Disabled" checked="checked" id="tag-status-disabled">
+          <label class="radio" for="tag-status-disabled">停用</label>
+        </div>
+        <div class="field">
+          <label class="label">授權</label>
+          <p class="control">
+            <gee:set-option module="staff" name="auth" tmpl="chkBoxOptTmpl"></gee:set-option>
+            <!-- <input class="is-checkradio" id="chkb-priv-" type="checkbox" name="priv[]" checked="checked" value="">
+            <label for="chkb-priv-">Check me</label> -->
+          </p>
+        </div>
+
+        <div class="field">
+          <label class="label">說明</label>
+          <p class="control">
+            <textarea class="textarea" name="info" placeholder="說明"></textarea>
+          </p>
+        </div>
+        <input type="hidden" name="id">
+        <div class="field is-grouped">
+          <p class="control">
+            <button type="button" class="button is-primary pre-gee" data-gene="click:setRow" data-reset="1">送出</button>
+          </p>
+          <p class="control">
+            <button type="button" class="button pre-gee" data-gene="click:cancelForm">取消</button>
+          </p>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

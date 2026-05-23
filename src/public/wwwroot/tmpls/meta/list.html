@@ -1,0 +1,91 @@
+<nav class="level">
+  <div class="level-left">
+    <nav class="breadcrumb">
+      <ul>
+        <li> <a class="gee" href="javascript:;" data-gene="click:loadMain" data-module="dashboard" data-layout="advanced">進階</a> </li>
+        <li class="is-active"> <a>後設欄位</a> </li>
+      </ul>
+    </nav>
+  </div>
+  <div class="level-right">
+    <p class="level-item">
+      <a class="button is-primary modal-btn gee" data-gene="click:showModal" data-tmpl="metaForm" data-src="modal" data-size="lg" data-id="0">新增</a>
+    </p>
+  </div>
+</nav>
+<nav class="list-filter level">
+  <div class="level-left">
+    <div class="level-item query-box">
+      <p class="control">
+        <div class="select" >
+          <select name="query" class="gee" data-gene="change:checkOption">
+            <optgroup label="資料">
+              <option value="m.fence~">欄位</option>
+              <option value="m.label~">呈現名稱</option>
+            </optgroup>
+            <optgroup label="狀態">
+                <option value="m.status=Enabled">啟用</option>
+                <option value="m.status=Disabled">未啟用</option>
+            </optgroup>
+          </select>
+        </div>
+      </p>
+    </div>
+    <div class="level-item">
+      <div class="field has-addons">
+        <p class="control">
+          <input class="input" type="text" placeholder="Find a option">
+        </p>
+        <p class="control">
+          <button class="button is-expanded gee" data-gene="init:initQueryForm,click:combineQuery" type="button">查詢</button>
+        </p>
+      </div>
+    </div>
+    <p class="level-item is-hidden">搜尋條件：</p>
+    <div class="tags js-query-list level-item"></div>
+  </div>
+</nav>
+<div class="columns is-multiline">
+  <div class="column">
+    <div class="content box-shadow is-scrollable">
+      <!-- LIST -->
+      <table class="list-body table is-striped is-hoverable">
+        <thead>
+          <tr>
+            <th>狀態</th>
+            <th>欄位</th>
+            <th>呈現名稱</th>
+            <th>適用領域</th>
+            <th>排序</th>
+            <th>格式</th>
+            <th>輸入方式</th>
+            <!-- <th>最後修改人</th> -->
+            <th class="is-actions-cell">操作</th>
+          </tr>
+        </thead>
+        <tfoot></tfoot>
+        <tbody class="gee" data-gene="init:loadList,click:reactList" data-tmpl="metaList" data-nopde="1">
+          <tr>
+            <td>{{:~txtLabel(prop.status, {'Enabled': '啟用', 'Disabled': '未啟用'})}}</td>
+            <td>{{:prop.fence}}</td>
+            <td>{{:prop.label}}</td>
+            <td><div class="tags" style="width: 25vw;"> {{props prop.tags}} <span class="tag is-info"> {{:prop.title}} </span> {{/props}} </div></td>
+            <td>{{:prop.sorter}}</td>
+            <td>{{:prop.type}}</td>
+            <td>{{:prop.input}}</td>
+            <!-- <td>{{:prop.account}}</td> -->
+            <td class="is-actions-cell">
+              <a href="javascript:;" class="button is-info" data-func="loadRow" data-tmpl="metaForm" data-src="modal" data-size="lg" data-id="{{:prop.id}}"> 編輯 </a>
+              <!-- <a href="javascript:;" class="button is-danger" data-func="delRow" data-id="{{:prop.id}}"> 刪除 </a> -->
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="list-footer level"><div class="level-left">
+        <span class="total-items level-item"></span>
+        <nav class="pagination level-item"><ul id="paginate"></ul></nav>
+    </div></div>
+  </div>
+</div>

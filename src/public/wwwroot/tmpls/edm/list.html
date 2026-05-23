@@ -1,0 +1,86 @@
+<nav class="level">
+  <div class="level-left">
+    <nav class="breadcrumb">
+      <ul>
+        <li> <a>會員管理</a> </li>
+        <li class="is-active"> <a>電子報</a> </li>
+      </ul>
+    </nav>
+  </div>
+  <div class="level-right">
+    <p class="level-item">
+      <a class="button is-primary modal-btn gee" data-gene="click:showModal" data-tmpl="edmForm" data-src="modal" data-size="lg" data-id="0">新增</a>
+    </p>
+  </div>
+</nav>
+<nav class="list-filter level">
+  <div class="level-left">
+    <div class="level-item query-box">
+      <p class="control">
+        <div class="select" >
+          <select name="query" class="gee" data-gene="change:checkOption">
+            <optgroup label="資訊">
+              <option value="m.vol_num~">期數</option>
+              <option value="g.title~">收信群組</option>
+              <option value="l.title~">主旨</option>
+              <option value="m.insert_ts<>">建立時間介於</option>
+            </optgroup>
+            <optgroup label="狀態">
+                <option value="m.status=Enabled">上架</option>
+                <option value="m.status=Disabled">下架</option>
+            </optgroup>
+          </select>
+        </div>
+      </p>
+    </div>
+    <div class="level-item">
+      <div class="field has-addons">
+        <p class="control">
+          <input class="input" type="text" placeholder="Find a option">
+        </p>
+        <p class="control">
+          <button class="button is-expanded gee" data-gene="init:initQueryForm,click:combineQuery" type="button">查詢</button>
+        </p>
+      </div>
+    </div>
+    <p class="level-item is-hidden">搜尋條件：</p>
+    <div class="tags js-query-list level-item"></div>
+  </div>
+</nav>
+<div class="columns is-multiline">
+  <div class="column">
+    <div class="content box-shadow is-scrollable">
+      <!-- LIST -->
+      <table class="list-body table is-striped">
+        <thead>
+          <tr>
+            <!-- <th>收信群組</th> -->
+            <th>主旨</th>
+            <th>期數</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tfoot></tfoot>
+        <tbody class="gee" data-gene="init:loadList,click:reactList" data-tmpl="edmList" data-nopde="1">
+          <tr>
+            <!-- <td>{{:prop.group}}</td> -->
+            <td>{{:prop.title}} <br> <small>{{:prop.slug}}</small></td>
+            <td>{{:prop.vol_num}} <br> <small>{{:prop.status}}</small></td>
+            <td>
+              <a href="javascript:;" class="button modal-btn is-primary" data-func="loadRow" data-tmpl="edmForm" data-src="modal" data-size="lg" data-id="{{:prop.id}}"> 修改 </a>
+              <a href="/edm/{{:prop.slug}}" target="_blank" class="button is-info">預覽</a>
+              <a href="/edm/{{:prop.slug}}/test" target="_blank" class="button is-warning">測試信</a>
+              <!-- <a href="javascript:;" class="button is-danger" data-func="loadRow" data-tmpl="edmSentForm" data-src="sent" data-size="nor" data-id="{{:prop.id}}">正式發信</a> -->
+              <!-- <a href="javascript:;" class="button is-danger" data-func="delRow" data-id="{{:prop.id}}"> 刪除 </a> -->
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="list-footer">
+      <nav class="pagination">
+        <ul id="paginate"></ul>
+      </nav>
+    </div>
+  </div>
+</div>

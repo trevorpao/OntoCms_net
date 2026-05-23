@@ -1,0 +1,97 @@
+<div class="modal-box">
+  <form class="gee" data-gene="init:initForm" data-tmpl="mediaForm" id="mediaForm">
+    <div class="modal-header">
+    <h2 class="module-title">{{if item.id }}修改{{else}}新增{{/if}}圖片</h2> </div>
+
+
+
+    <div class="tabs-content box" >
+      <div class="tab-box" title="基本資訊">
+
+        <div class="field">
+          <label class="label">語意化網址</label>
+          <p class="control">
+            <input class="input" name="slug" type="text" placeholder="語意化可提升搜尋排名！此欄位非必填，可留空">
+          </p>
+        </div>
+        <div class="field">
+          <label class="label">上傳圖片</label>
+          <gee-upload module-name="media" data-param="pic" info-text="請勿大於 20 MB"></gee-upload>
+        </div>
+        <div class="field">
+          <label class="label">狀態</label>
+          <input type="radio" class="is-checkradio" name="status" value="Enabled" id="media-status-enabled">
+          <label class="radio" for="media-status-enabled">啟用</label>
+          <input type="radio" class="is-checkradio" name="status" value="Disabled" checked="checked" id="media-status-disabled">
+          <label class="radio" for="media-status-disabled">停用</label>
+        </div>
+        <div class="field">
+          <label class="label">標題</label>
+          <p class="control">
+            <input class="input" name="lang[tw][title]" type="text" placeholder="標題">
+          </p>
+        </div>
+        <div class="field">
+          <label class="label">圖片描述</label>
+          <p class="control">
+            <textarea class="textarea" placeholder="圖片描述" name="lang[tw][info]"></textarea>
+          </p>
+        </div>
+      </div>
+      <div class="tab-box" title="英文資訊">
+        <div class="field">
+          <label class="label">標題</label>
+          <p class="control">
+            <input class="input" name="lang[en][title]" type="text" placeholder="標題">
+          </p>
+        </div>
+        <div class="field">
+          <label class="label">圖片描述</label>
+          <p class="control">
+            <textarea class="textarea" placeholder="圖片描述" name="lang[en][info]"></textarea>
+          </p>
+        </div>
+      </div>
+      <div class="tab-box" title="日文資訊">
+        <div class="field">
+          <label class="label">標題</label>
+          <p class="control">
+            <input class="input" name="lang[ja][title]" type="text" placeholder="標題">
+          </p>
+        </div>
+        <div class="field">
+          <label class="label">圖片描述</label>
+          <p class="control">
+            <textarea class="textarea" placeholder="圖片描述" name="lang[ja][info]"></textarea>
+          </p>
+        </div>
+      </div>
+      <div class="tab-box" title="韓文資訊">
+        <div class="field">
+          <label class="label">標題</label>
+          <p class="control">
+            <input class="input" name="lang[ko][title]" type="text" placeholder="標題">
+          </p>
+        </div>
+        <div class="field">
+          <label class="label">圖片描述</label>
+          <p class="control">
+            <textarea class="textarea" placeholder="圖片描述" name="lang[ko][info]"></textarea>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <input type="hidden" name="id">
+    <div class="tabs-footer">
+      <div class="field is-grouped">
+        <p class="control">
+          <button type="button" class="button is-primary pre-gee" data-gene="click:setRow">送出</button>
+        </p>
+        <p class="control">
+          <button type="button" class="button pre-gee" data-gene="click:hideModal">取消</button>
+        </p>
+      </div>
+    </div>
+  </form>
+</div>

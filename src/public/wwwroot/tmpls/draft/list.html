@@ -1,0 +1,104 @@
+
+<nav class="level">
+  <div class="level-left"><h1 class="module-title title is-2">AI 小編</h1> <p class="desc">各項 LLM 函式執行記錄</p></div>
+  <div class="level-right">
+    <p class="level-item tooltip">
+      <a class="button is-primary modal-btn gee" data-gene="click:showModal" data-tmpl="draftNewForm" data-src="new" data-size="nor" data-id="0">新增</a>
+      <span class="tooltip-text">建立新任務</span>
+    </p>
+    <!-- <p class="level-item"><a href="/api/lab/info?batchDraft=1&repeat=1" target="_blank" class="button is-danger"> 執行 LLM 函式 </a></p> -->
+    <p class="level-item"><a class="button is-warning gee" data-gene="click:arena.reload" data-ta="draftList" ><i class="fa fa-refresh"></i></a></p>
+  </div>
+</nav>
+
+<nav class="list-filter level">
+  <div class="level-left">
+    <div class="level-item">
+      <div class="control">
+        <div class="select">
+          <select class="dropdownQuery gee" data-gene="change:dropdownQuery">
+            <option value="">全部 LLM 函式</option>
+                <option value="m.method=writing">試稿</option>
+                <option value="m.method=seohelper">SEO文案</option>
+                <option value="m.method=translate">翻譯</option>
+                <option value="m.method=guideline">寫作指引</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="level-item query-box">
+      <div class="field has-addons">
+        <div class="control"><div class="select" >
+          <select name="query" class="gee" data-gene="change:checkOption">
+            <optgroup label="資料">
+              <option value="m.intent~">意圖</option>
+              <option value="m.content~">結果</option>
+            </optgroup>
+            <optgroup label="狀態">
+                <option value="m.status=New">新任務</option>
+                <option value="m.status=Waiting">等待中</option>
+                <option value="m.status=Done">已完成</option>
+                <option value="m.status=Used">已套用</option>
+                <option value="m.status=Invalid">無效</option>
+            </optgroup>
+          </select>
+        </div></div>
+        <div class="control">
+          <input class="input" type="text" placeholder="Input search condition">
+        </div>
+        <div class="control tooltip">
+          <button class="button is-expanded gee" data-gene="init:initQueryForm,click:combineQuery" type="button">查詢</button>
+          <span class="tooltip-text">可記錄最後一次查詢條件</span>
+        </div>
+      </div>
+    </div>
+    <p class="level-item is-hidden">搜尋條件：</p>
+    <div class="tags js-query-list level-item"></div>
+  </div>
+  <div class="level-right"></div>
+</nav>
+
+<div class="columns is-multiline">
+  <div class="column is-10 is-offset-1 b-table">
+    <div class="content box-shadow is-scrollable">
+      <!-- LIST -->
+      <table class="list-body table is-striped is-hoverable">
+        <thead>
+          <tr>
+            <th>LLM 函式</th>
+            <th>負責人</th>
+            <th>意圖</th>
+            <th>狀態</th>
+            <th>最後處理時間</th>
+            <th class="is-actions-cell">操作</th>
+          </tr>
+        </thead>
+        <tfoot></tfoot>
+        <tbody class="gee" data-gene="init:loadList,click:reactList" id="draftList" data-tmpl="draftList" data-nopde="1">
+          <tr>
+            <td>#{{:prop.id}} {{:~txtLabel(prop.method, {'writing': '試稿', 'seohelper': 'SEO文案', 'translate': '翻譯', 'guideline': '寫作指引'})}}</td>
+            <td>{{:prop.owner}}</td>
+            <td><div class="multiline-ellipsis" style="max-width: 35vw;">{{:prop.intent}}</div></td>
+            <td>{{:~txtLabel(prop.status, {'New': '新任務', 'Waiting': '等待中', 'Done': '已完成', 'Used': '已套用', 'Invalid': '無效'})}}</td>
+            <td>{{:prop.last_ts}}</td>
+            <td class="is-actions-cell">
+              <a href="javascript:;" class="button is-info" data-func="loadRow" data-tmpl="draftForm" data-src="modal" data-size="lg" data-id="{{:prop.id}}"> 編輯 </a>
+              {{if prop.method == 'translate' }}
+                {{if prop.status != 'New' }}<a href="/draft/{{:prop.id}}" class="button is-primary" target="_blank" > 預覽 </a>{{/if}}
+              {{/if}}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="list-footer level">
+      <div class="level-left">
+        <span class="total-items level-item"></span>
+        <nav class="pagination level-item">
+          <ul id="paginate"></ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</div>

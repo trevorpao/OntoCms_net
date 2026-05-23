@@ -1,0 +1,36 @@
+<div class="modal-box">
+  <form class="gee" data-gene="init:staff.initForm" data-tmpl="mineForm" id="mineForm">
+    <div class="modal-header">
+      <h2 class="module-title">修改個人資料</h2>
+      <p class="desc">如不變更密碼請勿填寫</p>
+    </div>
+    <div class="box">
+    <div class="field">
+      <label class="label">Email</label>
+      <p class="control">
+        <input class="input" name="email" type="text" placeholder="Email">
+      </p>
+    </div>
+    <div class="field">
+      <label class="label">新的密碼</label>
+      <p class="control">
+        <input class="input" name="pwd" type="password" autocomplete="new-password" placeholder="如不變更請勿填寫。建議長度 8-32 字元，含英文、數字及特殊字元">
+      </p>
+    </div>
+    <div class="field">
+      <label class="label">確認新的密碼</label>
+      <p class="control">
+        <input class="input" name="pwd_confirm" type="password" autocomplete="new-password" placeholder="同上">
+      </p>
+    </div></div>
+    <input type="hidden" name="id">
+    <div class="tabs-footer"><div class="field is-grouped">
+      <p class="control">
+        <button type="button" class="button is-primary pre-gee" data-gene="click:staff.setMine">送出</button>
+      </p>
+      <p class="control">
+        <button type="button" class="button pre-gee" data-gene="click:hideModal">取消</button>
+      </p>
+    </div></div>
+  </form>
+</div>

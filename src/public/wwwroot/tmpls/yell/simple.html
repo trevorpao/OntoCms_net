@@ -1,0 +1,75 @@
+<nav class="level">
+  <div class="level-left">
+    <nav class="breadcrumb">
+      <ul>
+        <li> <a class="gee" href="javascript:;" data-gene="click:loadMain" data-module="dashboard" data-layout="advanced">進階</a> </li>
+        <li class="is-active"> <a>Yell</a> </li>
+      </ul>
+    </nav>
+  </div>
+  <div class="level-right">
+  </div>
+</nav>
+
+<nav class="list-filter level">
+  <div class="level-left">
+    <div class="level-item query-box">
+      <p class="control">
+        <div class="select" >
+          <select name="query" class="gee" data-gene="change:checkOption">
+            <optgroup label="資料">
+              <option value="req~">請求內容</option>
+              <option value="res~">回傳內容</option>
+              <option value="insert_ts<>">操作時間起迄</option>
+            </optgroup>
+          </select>
+        </div>
+      </p>
+    </div>
+    <div class="level-item">
+      <div class="field has-addons">
+        <p class="control">
+          <input class="input" type="text" placeholder="Find a option">
+        </p>
+        <p class="control">
+          <button class="button is-expanded gee" data-gene="init:initQueryForm,click:combineQuery" type="button">查詢</button>
+        </p>
+      </div>
+    </div>
+    <p class="level-item is-hidden">搜尋條件：</p>
+    <div class="tags js-query-list level-item"></div>
+  </div>
+</nav>
+<div class="columns is-multiline">
+  <div class="column">
+    <div class="content box-shadow is-scrollable">
+      <!-- LIST -->
+      <table class="list-body table is-striped is-hoverable">
+        <thead>
+          <tr>
+            <th style="width: 120px;">來源</th>
+            <th style="width: 200px;">類型</th>
+            <th style="width: 200px;">操作時間</th>
+            <th>回應</th>
+            <th>請求</th>
+          </tr>
+        </thead>
+        <tfoot></tfoot>
+        <tbody class="gee" data-gene="init:loadList,click:reactList" data-tmpl="yellList" data-nopde="1">
+          <tr>
+            <td>{{:prop.source}}</td>
+            <td>{{:prop.action}}</td>
+            <td>{{:prop.insert_ts}}</td>
+            <td><div style="max-height: 140px; max-width: 36vw; overflow: auto;">{{:prop.res}}</div></td>
+            <td><div style="max-height: 140px; max-width: 36vw; overflow: auto;">{{:prop.req}}</div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="list-footer level"><div class="level-left">
+        <span class="total-items level-item"></span>
+        <nav class="pagination level-item"><ul id="paginate"></ul></nav>
+    </div></div>
+  </div>
+</div>
