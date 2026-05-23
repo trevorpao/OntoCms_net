@@ -1,0 +1,30 @@
+services:
+  web:
+    build:
+      context: ../..
+      dockerfile: conf/docker/Dockerfile
+    depends_on:
+      db:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ONTOCMS_APP_ENV}
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Server=${ONTOCMS_DB_HOST},1433;Database=${ONTOCMS_DB_NAME};User Id=${ONTOCMS_DB_USER};Password=${ONTOCMS_DB_PASSWORD};TrustServerCertificate=True
+    ports:
+      - ${ONTOCMS_HTTP_PORT}:8080
+    restart: unless-stopped
+
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_SA_PASSWORD: ${ONTOCMS_DB_PASSWORD}
+      MSSQL_PID: Developer
+    ports:
+      - ${ONTOCMS_DB_PORT}:1433
+    volumes:
+      - mssql-data:/var/opt/mssql
+    restart: unless-stopped
+
+volumes:
+  mssql-data:

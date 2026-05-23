@@ -1,0 +1,6 @@
+.git
+.github
+document
+.tmp
+**/bin
+**/obj
