@@ -21,6 +21,28 @@ services:
       - 4433:8443
     restart: unless-stopped
 
+  cli:
+    image: mcr.microsoft.com/dotnet/sdk:8.0
+    working_dir: /src
+    command:
+      - tail
+      - -f
+      - /dev/null
+    depends_on:
+      db:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ONTOCMS_APP_ENV}
+      ConnectionStrings__DefaultConnection: Server=${ONTOCMS_DB_HOST},1433;Database=${ONTOCMS_DB_NAME};User Id=${ONTOCMS_DB_USER};Password=${ONTOCMS_DB_PASSWORD};TrustServerCertificate=True
+    volumes:
+      - ../..:/src
+      - nuget-packages:/root/.nuget/packages
+      - cli-bin:/src/src/cli/bin
+      - cli-obj:/src/src/cli/obj
+      - web-bin:/src/src/public/bin
+      - web-obj:/src/src/public/obj
+    restart: unless-stopped
+
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
@@ -35,3 +57,8 @@ services:
 
 volumes:
   mssql-data:
+  nuget-packages:
+  cli-bin:
+  cli-obj:
+  web-bin:
+  web-obj:

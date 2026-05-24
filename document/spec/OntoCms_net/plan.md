@@ -72,10 +72,12 @@
     *   驗證優先以顯式 CLI smoke command 承接，例如 `smoke:post-save`；不要為了驗證 save path 而先把 module save route 或 web API 擴張進 production request path。
     *   rollback 類 smoke command 已驗證完成：透過故意讓 `_lang` 欄位違反 constraint，確認主表、`_meta`、`_lang` 都不會部分殘留。
     *   下一個最小 slice 應補第二個 caller，優先挑現成 schema 但較窄的 lang-only module，例如 `tbl_menu` + `tbl_menu_lang`，驗證 `SaveLangAsync()` 能重用於沒有 `_meta` 的 entity。
+    *   relation base 的第一個 caller 已由 `PostFeed` + `PostRelationRepository` 承接 `tbl_post_tag` 關閉；既有 `smoke:post-save` / `smoke:post-save-rollback` 也已擴充驗證 relation row 的成功寫入與 rollback。
     *   實作 `saveMeta()`：處理 `_meta` 表的鍵值對寫入。
     *   `BaseFeedRepository<T>` 只承接共通 CRUD / transaction；各 entity feed 仍必須自行決定主表、`_lang`、`_meta` 的寫入順序與 owner-side orchestration。
     *   確保 Task 1.2 與 1.3 包裝在同一個 `DbTransaction` 內。
     *   `Belong.php` 類的 relation 寫入（如 `saveMany` / `bind`）不納入本階段 FeedBase；若未來需要，另立 relation helper / base 再承接。
+    *   下一個 relation slice 應維持單一行為，例如另一個 `_meta` caller 以外的 counter / `byTag` 類 caller，而不是把 `Belong.php` 的 relation 能力一次 generic 化。
 *   **[驗收點]**：撰寫整合測試 (Integration Test)，傳入一份包含 title (`_lang`) 與 seo_desc (`_meta`) 的 Payload，驗證 Dapper 能正確分流並寫入三張表；同時確認 `BaseFeedRepository<T>` 只提供薄共通能力，不會把 Feed 推向 Entity Framework 式 ownership 混淆。
 
 #### Stage 2: 互動與權限治理 (Reaction & Auth 層)

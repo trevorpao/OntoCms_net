@@ -1,3 +1,5 @@
+using Dapper;
+using Microsoft.Data.SqlClient;
 using System.Reflection;
 using OntoCms.Conventions.Attributes;
 
@@ -80,6 +82,62 @@ public abstract class BaseRelationRepository
         return rows;
     }
 
+    protected async Task ReplaceSaveManyAsync(
+        SqlConnection connection,
+        SqlTransaction transaction,
+        string relationName,
+        int parentId,
+        IEnumerable<int> relationIds,
+        CancellationToken cancellationToken = default,
+        bool reverse = false,
+        bool sortable = false)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        ArgumentNullException.ThrowIfNull(transaction);
+
+        var distinctRelationIds = relationIds
+            .Where(static relationId => relationId > 0)
+            .Distinct()
+            .ToArray();
+
+        var metadata = CreateRelationMetadata(relationName, reverse);
+        var ownerKeyColumn = reverse ? metadata.RelationKeyColumn : metadata.OwnerKeyColumn;
+        var rows = BuildSaveManyRows(relationName, parentId, distinctRelationIds, reverse, sortable);
+
+        var deleteSql = $"DELETE FROM [dbo].[{metadata.RelationTableName}] WHERE {Bracket(ownerKeyColumn)} = @ParentId;";
+        await connection.ExecuteAsync(new CommandDefinition(
+            deleteSql,
+            new { ParentId = parentId },
+            transaction,
+            commandTimeout: 30,
+            cancellationToken: cancellationToken));
+
+        if (rows.Count == 0)
+        {
+            return;
+        }
+
+        for (var index = 0; index < rows.Count; index++)
+        {
+            var row = rows[index];
+            var orderedColumns = row.Values.Keys.OrderBy(static column => column, StringComparer.OrdinalIgnoreCase).ToArray();
+            var parameters = new DynamicParameters();
+
+            foreach (var column in orderedColumns)
+            {
+                parameters.Add($"p_{index}_{column}", row.Values[column]);
+            }
+
+            var insertSql = $"INSERT INTO [dbo].[{metadata.RelationTableName}] ({string.Join(", ", orderedColumns.Select(Bracket))}) VALUES ({string.Join(", ", orderedColumns.Select(column => $"@p_{index}_{column}"))});";
+            await connection.ExecuteAsync(new CommandDefinition(
+                insertSql,
+                parameters,
+                transaction,
+                commandTimeout: 30,
+                cancellationToken: cancellationToken));
+        }
+    }
+
     private RelationOwnerMetadata BuildOwnerMetadata()
     {
         var repositoryType = GetType();
@@ -105,6 +163,11 @@ public abstract class BaseRelationRepository
         }
 
         return relationName.Trim().ToLowerInvariant();
+    }
+
+    private static string Bracket(string value)
+    {
+        return $"[{value}]";
     }
 
     protected sealed record RelationOwnerMetadata(

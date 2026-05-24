@@ -126,10 +126,10 @@ OntoCms_net/
 為了避免每次手打完整 compose 參數，專案目前提供以下包裝腳本：
 
 1. `bin/build.sh`
-等價於對 `conf/docker/docker-compose.yml` 執行 build，並使用 repo root 的 `.env`。
+等價於對 `conf/docker/docker-compose.yml` 執行可快取的 `build web`，並使用 repo root 的 `.env`。這個腳本不再強制 `--no-cache`，也不再順手 publish CLI。
 
 2. `bin/up.sh`
-啟動目前專案的 compose services，適合本機開發與 smoke 前置。
+啟動目前專案的 compose services，適合本機開發與 smoke 前置。它現在也會一起拉起長駐的 `cli` dev container，讓後續 CLI 命令可直接走 `docker compose exec`。
 
 3. `bin/down.sh`
 停止目前專案的 compose services，但不刪除 volume。
@@ -138,7 +138,10 @@ OntoCms_net/
 清除目前專案的 compose 資源（container / local image / volume / orphan）。它已收斂為專案範圍，不再影響整台機器上的其他 Docker 專案。
 
 5. `bin/bootstrap-db.sh`
-以顯式命令方式執行資料庫 bootstrap。這個腳本會透過 container 內的 `OntoCms.Cli.dll` 執行 `db:bootstrap`，而不是把 bootstrap 綁回 web startup。
+以顯式命令方式執行資料庫 bootstrap。這個腳本現在會透過 compose 的 `cli` service 執行；該 service 只會在 `src/cli`、`src/conventions`、`src/Modules`、`document/sql` 較新時增量 build，否則直接執行既有的 `OntoCms.Cli.dll`，避免每次 CLI 啟動都重跑 `dotnet run` 的 build 檢查。
+
+6. `bin/cli.sh`
+以長駐 `cli` dev container 執行任意 CLI 命令。腳本會優先走 `docker compose exec`；只有 `db` 或 `cli` 尚未啟動時才補做 `up -d`。在目前 Docker 驗證下，`bin/cli.sh smoke:post-save` 約可壓到首次 1.9 秒、熱路徑 1.3 秒。
 
 ### 2.2 macOS HTTPS 信任鏈
 如果希望在 macOS 瀏覽器中直接開啟 `https://loc.f3cms.com:4433/`，而不是每次用 `curl -k` 或手動略過警告，請先完成 hosts 與 mkcert 的本機設定。

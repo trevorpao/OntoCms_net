@@ -19,6 +19,7 @@
 - 已補上最薄的 `api/option/get` endpoint，並以 Docker 驗證 `http://localhost:8080/api/option/get?id=1` 可返回 `id = 1` 的 option payload，與首頁顯示的 `Demo` 對齊。
 - 已補齊 Kestrel HTTPS 入口與自簽憑證生成，並以 `curl --resolve loc.f3cms.com:4433:127.0.0.1 -k` 驗證 `https://loc.f3cms.com:4433/` 與 `https://loc.f3cms.com:4433/api/option/get?id=1` 均已可用，完成 Stage 0 的最終入口驗收。
 - 開發 HTTPS 憑證初始化已從 container entrypoint 內的臨時 openssl 自生，改為 host-side 的 [bin/build.sh](bin/build.sh) 先用 `mkcert` + `openssl` 在 [conf/iis](conf/iis) 生成 `loc.f3cms.com.pfx`，再由 [conf/docker/docker-compose.yml](conf/docker/docker-compose.yml) 掛載進 `/https`；[conf/dotnet/entrypoint.sh](conf/dotnet/entrypoint.sh) 現在只檢查憑證存在，不再偷偷產證書。
+- [conf/docker/Dockerfile](conf/docker/Dockerfile) 現在只 publish web，不再在每次 image build 時順手 publish CLI；[bin/build.sh](bin/build.sh) 也已改為走可快取的 `docker compose build web`。
 - 已開始 Stage 1.1 的第一個 Feed contract slice：在 `src/conventions` 補上 `IFeedRepository<TPayload>`、`MTBAttribute`、`MULTILANGAttribute`，並讓 web `.csproj` 實際把 conventions 檔案納入編譯；Docker build 驗證通過。
 - 已補上 `BaseFeedRepository<TPayload>` 最小骨架，先只承接 `MTB` / `MULTILANG` metadata 與 table helper（main/lang/meta、primary key），不提前展開 `_handleColumn`、`saveLang()` 或 transaction；Docker build 驗證通過。
 - 已把首頁 route 從 `src/public/Controllers/HomeController.cs` 收回 `src/Modules/Option/outfit.cs`，並讓 `OptionOutfit` 重用 `OptionFeed` 讀取站台名稱；首頁 view 已移到 `src/theme/default/frontend/Home/Index.cshtml`。
@@ -35,6 +36,9 @@
 - 已依最新運行規則把 DB bootstrap 從 web startup 拔除：`Program.cs` 不再在啟動時自動執行 bootstrap；改由明確 CLI 指令 `db:bootstrap` 觸發，並新增 [bin/bootstrap-db.sh](bin/bootstrap-db.sh) 作為 Docker 友善入口，讓使用者只在需要時自行決定是否建立 / 初始化資料庫。
 - 已將 DB bootstrap 的承接位置再收斂為 [src/cli/Bootstrap/DatabaseBootstrapper.cs](src/cli/Bootstrap/DatabaseBootstrapper.cs)，避免把 CLI 專用實作放在 `public` 或 `conventions`；`public` host 只保留命令分流，CLI 實作本身改由獨立 `src/cli` 承接。
 - 已進一步將 DB bootstrap 正式切為獨立 CLI project：[src/cli/OntoCms.Cli.csproj](src/cli/OntoCms.Cli.csproj) 與 [src/cli/Program.cs](src/cli/Program.cs) 承接命令入口；[src/public/OntoCms.Web.csproj](src/public/OntoCms.Web.csproj) 不再編譯 `src/cli/**/*.cs`，production web build 與 CLI build 邊界已拆開。
+- CLI 的 Docker 執行路徑已進一步自 web final image 抽離：目前 [conf/docker/docker-compose.yml](conf/docker/docker-compose.yml) 已新增 SDK 型 `cli` service，先作為長駐 dev container 存活；`db:bootstrap` 與 smoke command 則透過 [bin/cli.sh](bin/cli.sh) 走 `docker compose exec`，不再為每次 CLI 命令重建 container。
+- [src/cli/OntoCms.Cli.csproj](src/cli/OntoCms.Cli.csproj) 已進一步與 [src/public/OntoCms.Web.csproj](src/public/OntoCms.Web.csproj) 解耦：CLI 現在直接編譯 `src/conventions`、`src/Modules` 並自行帶入 `document/sql/*.sql`，不再因 `ProjectReference` 先把整個 web host 一起編掉。
+- [conf/docker/docker-compose.yml](conf/docker/docker-compose.yml) 的 `cli` service 現在改由長駐 idle container + [bin/docker-cli-entrypoint.sh](bin/docker-cli-entrypoint.sh) 承接；`bin/cli.sh` 會優先 `exec` 進既有 container，只在來源檔比 `OntoCms.Cli.dll` 新時才增量 build，否則直接執行既有 DLL。Docker 驗證下 `smoke:post-save` 已壓到首次約 1.9 秒、熱路徑約 1.3 秒。
 - 已完成 Stage 1.2 的第二個最小 slice：在 [src/conventions/HMVC/BaseFeedRepository.cs](src/conventions/HMVC/BaseFeedRepository.cs) 補上主表 insert/update SQL 生成與 audit fields (`insert_ts` / `last_ts` / `insert_user` / `last_user`) 寫入骨架；[src/Modules/Option/feed.cs](src/Modules/Option/feed.cs) 現在可作為第一個主表 save caller，先只承接 `tbl_option` 主表，不提前展開 `_lang` / `_meta`。
 - 已補上 Stage 1.3 的第一個最小 slice：在 [src/conventions/HMVC/BaseFeedRepository.cs](src/conventions/HMVC/BaseFeedRepository.cs) 補上共通 transaction wrapper 與 `SaveMetaAsync()`；同時新增 [src/Modules/Post/feed.cs](src/Modules/Post/feed.cs) 作為第一個 `_meta` caller。由於 `tbl_option` 本身沒有 `_meta` / `_lang` side table，這一輪明確改由有現成 `tbl_post_meta` 的 Post 承接，避免在 Option 上做假 caller。
 - 已補上 Stage 1.3 的第二個最小 slice：在 [src/conventions/HMVC/BaseFeedRepository.cs](src/conventions/HMVC/BaseFeedRepository.cs) 補上 `SaveLangAsync()`，以 `MERGE INTO` 承接 `_lang` upsert 與缺席語系清理；[src/Modules/Post/feed.cs](src/Modules/Post/feed.cs) 現在可在同一個 transaction 內同時承接主表、`_meta`、`_lang` 三段寫入，成為第一個 `_lang` caller。
@@ -49,6 +53,9 @@
 - 已補上首頁的語系前綴路由：目前 [src/Modules/Option/outfit.cs](src/Modules/Option/outfit.cs) 同時支援 `/`、`/about`、`/tw`、`/en`、`/tw/about`、`/en/about`；首頁語言切換連結也已改用前綴路徑而非 querystring。
 - 已用 Docker runtime + curl 驗證首頁語言規則：`/` 走 default fallback、`/en/about` 走 route、帶 `user_lang=en` 的 `/about` 走 cookie、`/about?lang=tw` 可覆蓋 cookie、`/tw/about?lang=en` 仍以 route 優先。
 - 已將語言決策規則自 [src/conventions/HMVC/BaseOutfitController.cs](src/conventions/HMVC/BaseOutfitController.cs) 抽出並泛化為 [src/conventions/HMVC/ForkLanguageResolver.cs](src/conventions/HMVC/ForkLanguageResolver.cs)，避免 lang helper 被綁死在 Outfit fork；目前 `BaseOutfitController` 與 [src/conventions/HMVC/BaseReactionController.cs](src/conventions/HMVC/BaseReactionController.cs) 都只保留 HTTP request/cookie 的薄 adapter。
+- 已為 [src/conventions/HMVC/BaseRelationRepository.cs](src/conventions/HMVC/BaseRelationRepository.cs) 補上最小 `saveMany` persistence：目前可在既有 transaction 內先刪除 owner 既有 relation rows，再依 payload 重建 relation rows，不把 relation save path 回流到 FeedBase。
+- 已新增 [src/Modules/Post/relation.cs](src/Modules/Post/relation.cs) 作為 relation base 的第一個 module-owned caller，讓 [src/Modules/Post/feed.cs](src/Modules/Post/feed.cs) 可將 `tags` payload 寫入 [document/sql/init.sql](document/sql/init.sql#L1144) 對應的 `tbl_post_tag`。
+- 已擴充 [src/cli/Smoke/PostSaveSmoke.cs](src/cli/Smoke/PostSaveSmoke.cs) 驗證 Post save path 現在會同時覆蓋主表、`_meta`、`_lang`、`tbl_post_tag` relation；rollback smoke 也已確認 `_lang` 失敗時 `tbl_post_tag` 不會殘留 partial row。
 
 ### Drift
 - 原始文件的 bootstrap 前提漂移已完成第一輪對齊，目前已不再是假設 Docker / `.NET` artifact 存在，而是已落地為實際 repo 結構。
@@ -64,10 +71,11 @@
 - 先前 Stage 1 文件雖然已選 Dapper，但尚未把 FeedBase 的責任邊界寫清楚；本輪已把「Dapper-first、SQL-first、薄 QueryBuilder、entity-owned write order、`SqlKata` 僅作第二選項」補成明確規則。
 - 先前文件仍未明確回答 `Feed.php` 與 `Belong.php` 哪些函式該進 BaseFeed；本輪已把這個分界寫死，避免 `{Entity}/feed.cs` 因共通責任不清而重新長胖。
 - `Belong.php` 雖已從 FeedBase 排除，但若沒有獨立 relation base，entity feed 仍會重新長出 relation table/key 初始化與 row payload 組裝；本輪已補上這個最小獨立基底。
+- relation base 雖已存在，但先前還沒有任何實際 caller，導致文件雖主張 relation 應獨立承接，runtime 卻尚未證明這條路徑可用；本輪已用 Post/tag 的第一個 caller 與 Docker smoke 關閉這段 relation-base drift。
 - 先前 repo 沒有任何 OutfitBase，導致 `Outfit.php` 裡可共用的 route lifecycle / breadcrumb / formatter helper 沒有承接點；本輪已補上最小 `BaseOutfitController`，但仍刻意排除 static cache / XML/XLS 等 runtime-heavy 輸出。
 - 先前 repo 沒有任何 ReactionBase，導致 `Reaction.php` 裡可共用的 envelope / lifecycle / request guard helper 沒有承接點；本輪已補上最小 `BaseReactionController`，但仍刻意排除 dynamic rerouter、upload、與 entity-specific auth / validation。
 - 先前 repo 沒有任何 KitBase，導致 `Kit.php` 裡可共用的 rule selector / utility helper 沒有承接點；本輪已補上最小 `BaseKit`，但仍刻意排除 `Staff/kit.php` 類 account/login/mail/session side effect。
 - 先前 repo 沒有任何 SmokeBase，導致 `Smoke.php` 裡可共用的 contract dispatch 與錯誤類型沒有承接點；本輪已補上最小 `BaseSmoke`，但仍刻意排除 `Mobile/smoke.php` 類 module-owned DB bootstrap / assertion / cleanup。
 
 ### Next Step
-- 進入下一個最小步驟前，Stage 1.2 與 Stage 1.3 的 `_meta` / `_lang` 第一個 caller、最小 runtime 驗證、rollback smoke、與第二個 lang-only caller 都已完成；下一步應優先轉向 relation base 的第一個 caller，或另一個 `_meta` caller，而不是把寫入順序上推成 generic magic。
+- 目前 relation base 的第一個 caller 已由 Post/tag 關閉，且 Docker smoke 已驗證成功；下一步應優先轉向另一個 `_meta` caller，或 relation base 的第二個較窄行為（例如 counter / byTag），而不是把 relation / feed 寫入順序上推成 generic magic。

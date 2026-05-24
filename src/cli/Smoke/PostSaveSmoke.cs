@@ -36,7 +36,8 @@ internal static class PostSaveSmoke
                 {
                     ["tw"] = new("CLI 驗證文章", "內文測試", "No"),
                     ["en"] = new("CLI Smoke Post", "Smoke content", "No"),
-                }),
+                },
+                Tags: new[] { "101", "202" }),
                 cancellationToken);
 
             await using var connection = new SqlConnection(connectionString);
@@ -57,11 +58,17 @@ internal static class PostSaveSmoke
                 new { Id = rowId },
                 cancellationToken: cancellationToken));
 
+            var tagCount = await connection.QuerySingleAsync<int>(new CommandDefinition(
+                "SELECT COUNT(1) FROM [dbo].[tbl_post_tag] WHERE [post_id] = @Id AND [tag_id] IN (101, 202);",
+                new { Id = rowId },
+                cancellationToken: cancellationToken));
+
             if (!string.Equals(main.Slug, slug, StringComparison.Ordinal)
                 || !string.Equals(main.Status, "Enabled", StringComparison.Ordinal)
                 || !string.Equals(main.Layout, "normal", StringComparison.Ordinal)
                 || metaCount != 1
-                || langCount != 2)
+                || langCount != 2
+                || tagCount != 2)
             {
                 throw new InvalidOperationException("Post save smoke validation failed.");
             }
@@ -103,7 +110,8 @@ internal static class PostSaveSmoke
                 Lang: new Dictionary<string, PostFeed.LangWriteModel>
                 {
                     ["tw"] = new(langTitle, langContent, "Maybe"),
-                }),
+                },
+                Tags: new[] { "303", "404" }),
                 cancellationToken);
 
             throw new InvalidOperationException("Rollback smoke expected PostFeed.SaveAsync to fail, but it succeeded.");
@@ -128,6 +136,10 @@ internal static class PostSaveSmoke
                 new { LangTitle = langTitle, LangContent = langContent },
                 cancellationToken: cancellationToken));
 
+            var tagCount = await connection.QuerySingleAsync<int>(new CommandDefinition(
+                "SELECT COUNT(1) FROM [dbo].[tbl_post_tag] WHERE [tag_id] IN (303, 404);",
+                cancellationToken: cancellationToken));
+
             if (postCount != 0)
             {
                 throw new InvalidOperationException("Rollback smoke failed because tbl_post row still exists after SaveAsync error.", ex);
@@ -143,7 +155,12 @@ internal static class PostSaveSmoke
                 throw new InvalidOperationException("Rollback smoke failed because tbl_post_lang row still exists after SaveAsync error.", ex);
             }
 
-            logger.LogInformation("Post save rollback smoke passed. SaveAsync failed and no tbl_post/tbl_post_meta/tbl_post_lang rows remained for slug {Slug}.", slug);
+            if (tagCount != 0)
+            {
+                throw new InvalidOperationException("Rollback smoke failed because tbl_post_tag row still exists after SaveAsync error.", ex);
+            }
+
+            logger.LogInformation("Post save rollback smoke passed. SaveAsync failed and no tbl_post/tbl_post_meta/tbl_post_lang/tbl_post_tag rows remained for slug {Slug}.", slug);
         }
         finally
         {
@@ -171,7 +188,7 @@ internal static class PostSaveSmoke
         }
 
         await connection.ExecuteAsync(new CommandDefinition(
-            "DELETE FROM [dbo].[tbl_post_lang] WHERE [parent_id] = @Id; DELETE FROM [dbo].[tbl_post_meta] WHERE [parent_id] = @Id; DELETE FROM [dbo].[tbl_post] WHERE [id] = @Id;",
+            "DELETE FROM [dbo].[tbl_post_tag] WHERE [post_id] = @Id; DELETE FROM [dbo].[tbl_post_lang] WHERE [parent_id] = @Id; DELETE FROM [dbo].[tbl_post_meta] WHERE [parent_id] = @Id; DELETE FROM [dbo].[tbl_post] WHERE [id] = @Id;",
             new { Id = targetId },
             commandTimeout: 30,
             cancellationToken: cancellationToken));

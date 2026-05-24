@@ -10,10 +10,12 @@ namespace OntoCms.Modules.Post;
 public sealed class PostFeed : BaseFeedRepository<PostFeed.WriteModel>
 {
     private readonly IConfiguration configuration;
+    private readonly PostRelationRepository relationRepository;
 
     public PostFeed(IConfiguration configuration)
     {
         this.configuration = configuration;
+        relationRepository = new PostRelationRepository();
     }
 
     public async Task<PublishedPostRecord?> GetPublishedBySlugAsync(
@@ -78,6 +80,7 @@ post_lang.[id];
         {
             var rowId = await SaveMainRowAsync(connection, columns, payload.Id, transaction, token);
             await SaveMetaAsync(connection, transaction, rowId, columns.Meta, token);
+            await relationRepository.SaveTagsAsync(connection, transaction, rowId, columns.Tags, token);
             await SaveLangAsync(connection, transaction, rowId, columns.Lang, actorUserId: 0, token);
             return rowId;
         }, cancellationToken);
@@ -90,7 +93,8 @@ post_lang.[id];
         string Cover,
         string Layout,
         IReadOnlyDictionary<string, object?>? Meta = null,
-        IReadOnlyDictionary<string, LangWriteModel>? Lang = null);
+        IReadOnlyDictionary<string, LangWriteModel>? Lang = null,
+        IReadOnlyList<string>? Tags = null);
 
     public sealed record LangWriteModel(
         string Title,

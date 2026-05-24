@@ -7,5 +7,5 @@ ENV_FILE="$CU_DIR/.env"
 COMPOSE_FILE="$CU_DIR/conf/docker/docker-compose.yml"
 PROJECT_NAME="ontocms_net"
 
-docker compose --project-name "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d db
-docker compose --project-name "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" run --rm --entrypoint dotnet web cli/OntoCms.Cli.dll db:bootstrap
+docker compose --project-name "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d db cli
+docker compose --project-name "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T cli bash /src/bin/docker-cli-entrypoint.sh db:bootstrap
