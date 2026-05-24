@@ -96,6 +96,11 @@
 - [x] 已建立 [src/conventions/HMVC/BaseReactionController.cs](src/conventions/HMVC/BaseReactionController.cs)，承接 reaction lifecycle hook、JSON envelope helper、`id/query` normalize helper、以及 `HandleRow()` / `HandleIteratee()` / `BeforeSaveAsync()` hook
 - [x] `src/Modules/Option/reaction.cs` 已改為繼承 `BaseReactionController`，module reaction 只保留 entity-owned feed call 與 route declaration
 - [x] Stage 2 文件已明確決定 ReactionBase 函式邊界：承接 API lifecycle、共通 envelope、request normalize、row/save hook；不承接 entity auth policy、dynamic rerouter、或 upload 流程
+- [x] 已建立 [src/conventions/HMVC/IReactionFeedContracts.cs](src/conventions/HMVC/IReactionFeedContracts.cs)，補上 `IReactionGetFeed<T>`、`IReactionListFeed<T>`、`IReactionOptionsFeed<T>` 這類最薄 reaction feed contract
+- [x] [src/conventions/HMVC/BaseReactionController.cs](src/conventions/HMVC/BaseReactionController.cs) 已補上可直接吃 feed contract 的 `ReactGetAsync()` / `ReactSaveAsync()` / `ReactListAsync()` / `ReactGetOptionsAsync()` overload，讓 shared flow 不必由 entity reaction 重複組 delegate
+- [x] [src/Modules/Option/reaction.cs](src/Modules/Option/reaction.cs) 已以 `OptionFeed` 作為第一個 contract-based proof，`get` / `save` route 只保留 route declaration 與 owner-side feed wiring
+- [x] 已新增 [bin/check-web.sh](bin/check-web.sh) 與 [bin/docker-web-check-entrypoint.sh](bin/docker-web-check-entrypoint.sh) 作為較便宜的 Docker-first web compile check，讓日常開發期檢查不必回到 `docker compose ... build web`
+- [x] [conf/docker/Dockerfile](conf/docker/Dockerfile) 已縮小 build-stage copy 範圍，Docker web build cache 失效範圍已收斂到 web publish 真正需要的目錄
 - [x] 已建立 [src/conventions/HMVC/BaseKit.cs](src/conventions/HMVC/BaseKit.cs)，承接 rule group selector、rule factory helper、與 `strWidth()` 對應的純字串 helper
 - [x] `src/Modules/Option/kit.cs` 已改為繼承 `BaseKit`，module kit 只保留 entity-owned rule group wrapper
 - [x] Stage 3 文件已明確決定 KitBase 函式邊界：承接 rule group/factory helper 與純 utility；不承接 account/login/mail/session/DB side effect
@@ -122,6 +127,6 @@
 - [x] relation base 的第二個單一行為已由 `byTag` 關閉；若要繼續擴充 relation，下一個最小 slice 應優先補 `counter` 類 caller
 - [ ] relation `counter` 目前缺少 schema-backed caller：現有 repo schema 尚未出現可直接對照 `<relation>_cnt` 的主表欄位；若要繼續擴充，下一步應先找到或引入真實 caller，再做 `counter`
 - [ ] 若要繼續擴充 OutfitBase，下一個最小 caller 應先落在 breadcrumb 或共通 theme render，不直接把 `Outfit.php` 的 static cache / XML/XLS 輸出整包搬入
-- [ ] 若要繼續擴充 ReactionBase，下一個最小 caller 應先落在 list/get/save 三者之一的共通 wrapper，不直接把 `Reaction.php` 的 dynamic rerouter 或 upload 流程整包搬入
+- [x] `ReactionBase` 的 `get` / `save` shared flow 與 feed-side contract proof已由 `OptionReaction` 補到 `list` / `get_opts` 第一個 caller；若要繼續擴充，下一個最小 slice 應先落在 `del` 或 request validation rule wrapper，不直接把 `Reaction.php` 的 dynamic rerouter 或 upload 流程整包搬入
 - [ ] 若要繼續擴充 KitBase，下一個最小 caller 應先落在 save/login 其中一組 validation rule wrapper，不直接把 `Staff/kit.php` 的 login/session/mail side effect 整包搬入
 - [ ] 若要繼續擴充 SmokeBase，下一個最小 caller 應先挑單一 surface/contract scenario，不直接把 `Mobile/smoke.php` 的整包 DB bootstrap 與 assertion 一次搬入

@@ -10,6 +10,8 @@ namespace OntoCms.Modules.Option;
 [MULTILANG(false)]
 public sealed class OptionFeed : BaseFeedRepository<OptionFeed.WriteModel>
     , IReactionGetFeed<OptionFeed.OptionRecord>
+    , IReactionListFeed<OptionFeed.OptionRecord>
+    , IReactionOptionsFeed<OptionFeed.OptionOption>
 {
     private readonly IConfiguration configuration;
 
@@ -41,6 +43,77 @@ public sealed class OptionFeed : BaseFeedRepository<OptionFeed.WriteModel>
         await connection.OpenAsync(cancellationToken);
 
         return await OneAsync<OptionRecord>(connection, query, cancellationToken);
+    }
+
+    public async Task<FeedPageResult<OptionRecord>> LimitRowsAsync(
+        string query,
+        int page,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return new FeedPageResult<OptionRecord>(Array.Empty<OptionRecord>(), 0, limit, 0, 0);
+        }
+
+        var normalizedQuery = query.Trim();
+        var rowsQuery = NewQuery("[dbo].[tbl_option]")
+            .Select(
+                "id as Id",
+                "group as [Group]",
+                "loader as Loader",
+                "status as Status",
+                "name as Name",
+                "content as Content")
+            .OrderBy("group")
+            .OrderBy("id");
+
+        if (!string.IsNullOrWhiteSpace(normalizedQuery))
+        {
+            rowsQuery.Where(q => q
+                .WhereLike("group", $"%{normalizedQuery}%")
+                .OrWhereLike("name", $"%{normalizedQuery}%")
+                .OrWhereLike("content", $"%{normalizedQuery}%"));
+        }
+
+        await using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        return await LimitRowsAsync<OptionRecord>(connection, rowsQuery, page, limit, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<OptionOption>> GetOptionsAsync(
+        string query,
+        CancellationToken cancellationToken = default)
+    {
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return Array.Empty<OptionOption>();
+        }
+
+        var normalizedQuery = query.Trim();
+        var optionsQuery = NewQuery("[dbo].[tbl_option]")
+            .Select(
+                "id as Id",
+                "name as Title")
+            .Where("status", "Enabled")
+            .OrderBy("group")
+            .OrderBy("id");
+
+        if (!string.IsNullOrWhiteSpace(normalizedQuery))
+        {
+            optionsQuery.Where(q => q
+                .WhereLike("group", $"%{normalizedQuery}%")
+                .OrWhereLike("name", $"%{normalizedQuery}%")
+                .OrWhereLike("content", $"%{normalizedQuery}%"));
+        }
+
+        await using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        return await LotsAsync<OptionOption>(connection, optionsQuery, cancellationToken);
     }
 
     public async Task<string> GetSiteTitleAsync(CancellationToken cancellationToken)
@@ -106,4 +179,8 @@ public sealed class OptionFeed : BaseFeedRepository<OptionFeed.WriteModel>
         string Status,
         string Name,
         string Content);
+
+    public sealed record OptionOption(
+        int Id,
+        string Title);
 }
