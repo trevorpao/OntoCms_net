@@ -34,6 +34,10 @@
 - 架構、術語、流程、責任邊界以 `document/` 為主
 - 不用 generic framework assumptions 取代專案文件
 - 若共用文件與 feature 文件不一致，先標示漂移，不直接改設計
+- Feed / relation 的資料存取預設採 Dapper-first、SQL-first；`SqlKata` 只作為薄 read-side query builder 第二選項，不接管 save path 或 transaction ownership
+- Feed / relation 動手前先檢查：SQL 能否留在 owner path、save flow 是否仍由 Dapper 顯式控制、`SqlKata` 是否只被用在 read-side compose / compile
+- relation helper 預設留在 owner file；若 FORKS / 上游沒有對應結構，不要額外長出 `relation.cs`
+- 若 read-side 使用 `SqlKata`，compile / execute 細節要收在小介面，不要散落在各 feed / relation caller
 
 ## 3. 驗證環境優先序
 

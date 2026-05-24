@@ -53,9 +53,186 @@ public abstract class BaseReactionController : ControllerBase
         return row;
     }
 
+    protected async Task<IActionResult> ReactGetAsync<TRow>(
+        int id,
+        Func<int, CancellationToken, Task<TRow?>> loadRowAsync,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(loadRowAsync);
+
+        return await ExecuteReactionAsync(async token =>
+        {
+            if (!TryGetPositiveId(id, out var normalizedId))
+            {
+                return OkMissing();
+            }
+
+            var row = await loadRowAsync(normalizedId, token);
+            if (row is null)
+            {
+                return OkMissing();
+            }
+
+            return OkDone(HandleRow(row));
+        }, cancellationToken);
+    }
+
+    protected Task<IActionResult> ReactGetAsync<TRow>(
+        int id,
+        IReactionGetFeed<TRow> feed,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(feed);
+
+        return ReactGetAsync(id, feed.GetAsync, cancellationToken);
+    }
+
+    protected async Task<IActionResult> ReactSaveAsync<TPayload>(
+        TPayload payload,
+        Func<TPayload, CancellationToken, Task<int>> saveAsync,
+        CancellationToken cancellationToken = default)
+        where TPayload : class
+    {
+        ArgumentNullException.ThrowIfNull(payload);
+        ArgumentNullException.ThrowIfNull(saveAsync);
+
+        return await ExecuteReactionAsync(async token =>
+        {
+            var normalizedPayload = await BeforeSaveAsync(payload, token);
+            var rowId = await saveAsync(normalizedPayload, token);
+            return OkDone(new { id = rowId });
+        }, cancellationToken);
+    }
+
+    protected Task<IActionResult> ReactSaveAsync<TPayload>(
+        TPayload payload,
+        IFeedRepository<TPayload> feed,
+        CancellationToken cancellationToken = default)
+        where TPayload : class
+    {
+        ArgumentNullException.ThrowIfNull(feed);
+
+        return ReactSaveAsync(payload, feed.SaveAsync, cancellationToken);
+    }
+
+    protected async Task<IActionResult> ReactListAsync<TRow>(
+        string? query,
+        int? page,
+        int? limit,
+        Func<string, int, int, CancellationToken, Task<FeedPageResult<TRow>>> loadRowsAsync,
+        CancellationToken cancellationToken = default,
+        int defaultLimit = 24,
+        int minLimit = 12,
+        int? maxLimit = null)
+    {
+        ArgumentNullException.ThrowIfNull(loadRowsAsync);
+
+        return await ExecuteReactionAsync(async token =>
+        {
+            var normalizedQuery = NormalizeQuery(query);
+            var pageIndex = NormalizePageIndex(page);
+            var normalizedLimit = NormalizeReactionLimit(limit, defaultLimit, minLimit, maxLimit);
+            var pageResult = await loadRowsAsync(normalizedQuery, pageIndex, normalizedLimit, token);
+            var subset = pageResult.Subset.Select(HandleIteratee).ToArray();
+
+            return OkDone(new
+            {
+                subset,
+                limit = pageResult.Limit,
+                pos = pageResult.Pos,
+                total = pageResult.Total,
+                count = pageResult.Count,
+                sql = string.Empty,
+            });
+        }, cancellationToken);
+    }
+
+    protected Task<IActionResult> ReactListAsync<TRow>(
+        string? query,
+        int? page,
+        int? limit,
+        IReactionListFeed<TRow> feed,
+        CancellationToken cancellationToken = default,
+        int defaultLimit = 24,
+        int minLimit = 12,
+        int? maxLimit = null)
+    {
+        ArgumentNullException.ThrowIfNull(feed);
+
+        return ReactListAsync(
+            query,
+            page,
+            limit,
+            feed.LimitRowsAsync,
+            cancellationToken,
+            defaultLimit,
+            minLimit,
+            maxLimit);
+    }
+
+    protected async Task<IActionResult> ReactGetOptionsAsync<TOption>(
+        string? query,
+        Func<string, CancellationToken, Task<IReadOnlyList<TOption>>> loadOptionsAsync,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(loadOptionsAsync);
+
+        return await ExecuteReactionAsync(async token =>
+        {
+            var normalizedQuery = NormalizeQuery(query);
+            var rows = await loadOptionsAsync(normalizedQuery, token);
+            return OkDone(rows);
+        }, cancellationToken);
+    }
+
+    protected Task<IActionResult> ReactGetOptionsAsync<TOption>(
+        string? query,
+        IReactionOptionsFeed<TOption> feed,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(feed);
+
+        return ReactGetOptionsAsync(query, feed.GetOptionsAsync, cancellationToken);
+    }
+
     protected static string NormalizeQuery(string? query)
     {
         return query?.Trim() ?? string.Empty;
+    }
+
+    protected static int NormalizePageIndex(int? page)
+    {
+        if (!page.HasValue || page.Value <= 1)
+        {
+            return 0;
+        }
+
+        return page.Value - 1;
+    }
+
+    protected static int NormalizeReactionLimit(
+        int? limit,
+        int defaultLimit = 24,
+        int minLimit = 12,
+        int? maxLimit = null)
+    {
+        if (defaultLimit <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(defaultLimit), "Default limit must be positive.");
+        }
+
+        if (minLimit <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(minLimit), "Minimum limit must be positive.");
+        }
+
+        var ceiling = Math.Max(maxLimit ?? defaultLimit, minLimit);
+        if (!limit.HasValue || limit.Value <= 0)
+        {
+            return ceiling;
+        }
+
+        return Math.Clamp(limit.Value, minLimit, ceiling);
     }
 
     protected static bool TryGetPositiveId(int id, out int normalizedId)

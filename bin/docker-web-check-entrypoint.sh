@@ -2,9 +2,9 @@
 
 set -euo pipefail
 
-PROJECT_PATH="/src/src/cli/OntoCms.Cli.csproj"
-OUTPUT_DLL="/src/src/cli/bin/Debug/net8.0/OntoCms.Cli.dll"
-ASSETS_FILE="/src/src/cli/obj/project.assets.json"
+PROJECT_PATH="/src/src/public/OntoCms.Web.csproj"
+OUTPUT_DLL="/src/src/public/bin/Debug/net8.0/OntoCms.Web.dll"
+ASSETS_FILE="/src/src/public/obj/project.assets.json"
 
 needs_restore() {
 	if [[ ! -f "$ASSETS_FILE" ]]; then
@@ -12,7 +12,8 @@ needs_restore() {
 	fi
 
 	find \
-		/src/src/cli \
+		/src/src/public \
+		\( -path '/src/src/public/bin' -o -path '/src/src/public/obj' \) -prune -o \
 		-type f \
 		\( -name '*.csproj' -o -name 'Directory.Packages.props' -o -name 'NuGet.Config' \) \
 		-newer "$ASSETS_FILE" \
@@ -25,12 +26,14 @@ needs_build() {
 	fi
 
 	find \
-		/src/src/cli \
+		/src/src/public \
 		/src/src/conventions \
 		/src/src/Modules \
+		/src/src/theme/default \
 		/src/document/sql \
+		\( -path '/src/src/public/bin' -o -path '/src/src/public/obj' \) -prune -o \
 		-type f \
-		\( -name '*.cs' -o -name '*.csproj' -o -name '*.sql' \) \
+		\( -name '*.cs' -o -name '*.cshtml' -o -name '*.csproj' -o -name '*.json' -o -name '*.sql' \) \
 		-newer "$OUTPUT_DLL" \
 		-print -quit | grep -q .
 }
@@ -44,4 +47,4 @@ if needs_build; then
 	dotnet "${build_args[@]}"
 fi
 
-exec dotnet "$OUTPUT_DLL" "$@"
+echo "Web Debug build is up to date."

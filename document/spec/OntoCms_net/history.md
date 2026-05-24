@@ -54,8 +54,21 @@
 - 已用 Docker runtime + curl 驗證首頁語言規則：`/` 走 default fallback、`/en/about` 走 route、帶 `user_lang=en` 的 `/about` 走 cookie、`/about?lang=tw` 可覆蓋 cookie、`/tw/about?lang=en` 仍以 route 優先。
 - 已將語言決策規則自 [src/conventions/HMVC/BaseOutfitController.cs](src/conventions/HMVC/BaseOutfitController.cs) 抽出並泛化為 [src/conventions/HMVC/ForkLanguageResolver.cs](src/conventions/HMVC/ForkLanguageResolver.cs)，避免 lang helper 被綁死在 Outfit fork；目前 `BaseOutfitController` 與 [src/conventions/HMVC/BaseReactionController.cs](src/conventions/HMVC/BaseReactionController.cs) 都只保留 HTTP request/cookie 的薄 adapter。
 - 已為 [src/conventions/HMVC/BaseRelationRepository.cs](src/conventions/HMVC/BaseRelationRepository.cs) 補上最小 `saveMany` persistence：目前可在既有 transaction 內先刪除 owner 既有 relation rows，再依 payload 重建 relation rows，不把 relation save path 回流到 FeedBase。
-- 已新增 [src/Modules/Post/relation.cs](src/Modules/Post/relation.cs) 作為 relation base 的第一個 module-owned caller，讓 [src/Modules/Post/feed.cs](src/Modules/Post/feed.cs) 可將 `tags` payload 寫入 [document/sql/init.sql](document/sql/init.sql#L1144) 對應的 `tbl_post_tag`。
+- 已先用 Post 的 owner-side relation helper 關閉 relation base 的第一個 caller：目前 [src/Modules/Post/feed.cs](src/Modules/Post/feed.cs) 內的 private `PostRelationRepository` 會將 `tags` payload 寫入 [document/sql/init.sql](document/sql/init.sql#L1144) 對應的 `tbl_post_tag`，不再額外長出獨立 `relation.cs`。
 - 已擴充 [src/cli/Smoke/PostSaveSmoke.cs](src/cli/Smoke/PostSaveSmoke.cs) 驗證 Post save path 現在會同時覆蓋主表、`_meta`、`_lang`、`tbl_post_tag` relation；rollback smoke 也已確認 `_lang` 失敗時 `tbl_post_tag` 不會殘留 partial row。
+- 已新增 [src/Modules/Adv/feed.cs](src/Modules/Adv/feed.cs) 作為第二個 `_meta` caller，讓 `tbl_adv`、`tbl_adv_meta`、`tbl_adv_lang` 可在同一個 transaction 內重用 BaseFeed 的主表、`_meta`、`_lang` save path，且不必順手擴到 relation。
+- 已新增 [src/cli/Smoke/AdvSaveSmoke.cs](src/cli/Smoke/AdvSaveSmoke.cs) 與 [src/cli/Program.cs](src/cli/Program.cs) 的 `smoke:adv-save` 命令，並已用 Docker `bin/cli.sh smoke:adv-save` 驗證主表、`_meta`、`_lang` 寫入與清理都成功。
+- 已在 [src/conventions/HMVC/BaseRelationRepository.cs](src/conventions/HMVC/BaseRelationRepository.cs) 補上最小 `byTag` 對應讀取 helper：目前可依單一或多個 relation ids 取回 owner ids，且多 tag 會以交集語意收斂，不把 relation read path 推回 FeedBase。
+- 已讓 [src/Modules/Post/feed.cs](src/Modules/Post/feed.cs) 內的 owner-side relation helper 承接 relation base 的第二個 caller，補上 `PostFeed.GetIdsByTagAsync()` 對應 `tbl_post_tag` 的 `byTag` 查詢。
+- 已擴充 [src/cli/Smoke/PostSaveSmoke.cs](src/cli/Smoke/PostSaveSmoke.cs) 與 [src/cli/Program.cs](src/cli/Program.cs) 的 `smoke:post-bytag` 命令，並已用 Docker `bin/cli.sh smoke:post-bytag` 驗證單 tag 與多 tag 交集查詢都成功。
+- 已在 [src/conventions/HMVC/BaseRelationRepository.cs](src/conventions/HMVC/BaseRelationRepository.cs) 補上 owner → relation ids 讀取 helper，讓 relation read 不只停在 `byTag`，也能承接 `lotsSub` 對應的最小 owner-side 查詢。
+- 已讓 [src/Modules/Post/feed.cs](src/Modules/Post/feed.cs) 內的 owner-side relation helper 再補上一層 `PostFeed.GetTagIdsAsync()`，承接 `tbl_post_tag` 的 owner → tag ids 讀取。
+- 已擴充 [src/cli/Smoke/PostSaveSmoke.cs](src/cli/Smoke/PostSaveSmoke.cs) 與 [src/cli/Program.cs](src/cli/Program.cs) 的 `smoke:post-tagids` 命令，並已用 Docker `bin/cli.sh smoke:post-tagids` 驗證 owner → tag ids 讀取成功。
+- 已在 [src/conventions/HMVC/BaseFeedRepository.cs](src/conventions/HMVC/BaseFeedRepository.cs) 補上最小 SqlKata compile helper，定位只收斂為「組出 SQL + bindings」，實際執行仍交給 Dapper，不把 FeedBase 推向重型 query abstraction。
+- 已將 [src/Modules/Option/feed.cs](src/Modules/Option/feed.cs) 的 `GetSiteTitleAsync()` 改為第一個 read-only pilot：目前由 SqlKata 組查詢，再由 Dapper 執行；既有 save path 不受影響。
+- 已在 [src/conventions/HMVC/BaseFeedRepository.cs](src/conventions/HMVC/BaseFeedRepository.cs) 進一步補上 `OneAsync()`、`LotsAsync()`、`LimitRowsAsync()` 這類 read-side 小介面，讓 SqlKata 的 compile / execute 細節集中在 base-level 入口，不散落在 feed caller。
+- 已在 [src/conventions/HMVC/BaseRelationRepository.cs](src/conventions/HMVC/BaseRelationRepository.cs) 補上 `NewReadQuery()`、`CompileReadCommand()`、`ReadManyAsync()`，讓 relation read-side 也走 SqlKata + Dapper 的小介面模式；write-side 的 `ReplaceSaveManyAsync()` 仍維持 Dapper + transaction。
+- 已同步調整 [src/public/OntoCms.Web.csproj](src/public/OntoCms.Web.csproj)、[src/cli/OntoCms.Cli.csproj](src/cli/OntoCms.Cli.csproj) 與 [bin/docker-cli-entrypoint.sh](bin/docker-cli-entrypoint.sh)，並已用 Docker `build web` 與 `bin/cli.sh smoke:adv-save` 驗證 web/cli 兩條 build graph 都通過。
 
 ### Drift
 - 原始文件的 bootstrap 前提漂移已完成第一輪對齊，目前已不再是假設 Docker / `.NET` artifact 存在，而是已落地為實際 repo 結構。
@@ -72,10 +85,17 @@
 - 先前文件仍未明確回答 `Feed.php` 與 `Belong.php` 哪些函式該進 BaseFeed；本輪已把這個分界寫死，避免 `{Entity}/feed.cs` 因共通責任不清而重新長胖。
 - `Belong.php` 雖已從 FeedBase 排除，但若沒有獨立 relation base，entity feed 仍會重新長出 relation table/key 初始化與 row payload 組裝；本輪已補上這個最小獨立基底。
 - relation base 雖已存在，但先前還沒有任何實際 caller，導致文件雖主張 relation 應獨立承接，runtime 卻尚未證明這條路徑可用；本輪已用 Post/tag 的第一個 caller 與 Docker smoke 關閉這段 relation-base drift。
+- 先前文件要求「下一步優先補另一個 `_meta` caller」，但 runtime 尚只有 Post 一個 `_meta` 實例；本輪已用 Adv 作為第二個 `_meta` caller 關閉這段 caller coverage drift。
+- 先前文件雖已收斂 relation 第二步應做 `counter` 或 `byTag`，但 runtime 尚未有任何 relation read caller；本輪已用 Post/tag 的 `byTag` caller 與 Docker smoke 關閉這段 relation-read coverage drift。
+- 先前文件把下一步直接收斂到 relation `counter`，但目前 repo schema 找不到任何現成 `<relation>_cnt` 欄位，且 PHP modules 端也沒有可直接對照的 `setCnt()` caller；本輪先把這段規劃漂移顯性化，改以同一條 relation 線上的 owner → relation ids 讀取作為最小替代 slice。
+- 先前文件雖已把 `SqlKata` 定位為第二選項，但 repo 內還沒有任何實際 caller，導致規則存在於文件、runtime 卻沒有最小證明；本輪已用 `OptionFeed.GetSiteTitleAsync()` 的 read-only pilot 關閉這段 SqlKata adoption drift。
+- 先前文件仍把 relation caller 寫成獨立 `src/Modules/Post/relation.cs`，與目前 owner-file-first 結構不一致；本輪已改回以 [src/Modules/Post/feed.cs](src/Modules/Post/feed.cs) 內的 private relation helper 為準，關閉這段 owner-boundary drift。
+- 先前文件雖已寫明 `SqlKata` 僅限 read-side，但尚未明確反映 compile / execute 細節應收在小介面；本輪已以 `OneAsync()` / `LotsAsync()` / `LimitRowsAsync()` 與 relation base read helper 關閉這段 read-side interface drift。
 - 先前 repo 沒有任何 OutfitBase，導致 `Outfit.php` 裡可共用的 route lifecycle / breadcrumb / formatter helper 沒有承接點；本輪已補上最小 `BaseOutfitController`，但仍刻意排除 static cache / XML/XLS 等 runtime-heavy 輸出。
 - 先前 repo 沒有任何 ReactionBase，導致 `Reaction.php` 裡可共用的 envelope / lifecycle / request guard helper 沒有承接點；本輪已補上最小 `BaseReactionController`，但仍刻意排除 dynamic rerouter、upload、與 entity-specific auth / validation。
 - 先前 repo 沒有任何 KitBase，導致 `Kit.php` 裡可共用的 rule selector / utility helper 沒有承接點；本輪已補上最小 `BaseKit`，但仍刻意排除 `Staff/kit.php` 類 account/login/mail/session side effect。
 - 先前 repo 沒有任何 SmokeBase，導致 `Smoke.php` 裡可共用的 contract dispatch 與錯誤類型沒有承接點；本輪已補上最小 `BaseSmoke`，但仍刻意排除 `Mobile/smoke.php` 類 module-owned DB bootstrap / assertion / cleanup。
 
 ### Next Step
-- 目前 relation base 的第一個 caller 已由 Post/tag 關閉，且 Docker smoke 已驗證成功；下一步應優先轉向另一個 `_meta` caller，或 relation base 的第二個較窄行為（例如 counter / byTag），而不是把 relation / feed 寫入順序上推成 generic magic。
+- 目前 relation base 的 read path 已由 Post/tag 的 `byTag` 與 owner → tag ids caller 關閉，且 Docker smoke 已驗證成功；若要繼續往 relation `counter` 推進，下一步應先找到或引入一個真正具備 `<relation>_cnt` 欄位的 schema-backed caller，而不是把 `counter` 硬做成 generic magic。
+- `SqlKata` 目前已在 FeedBase / RelationBase 內有最小 read-side compile helper 與 owner-facing 小介面；若要繼續擴充，下一步應優先落在 list/paginate 類 read path，而不是把 save/upsert/transaction orchestration 改寫成 builder-first。

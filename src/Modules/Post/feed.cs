@@ -63,6 +63,38 @@ post_lang.[id];
             cancellationToken: cancellationToken));
     }
 
+    public async Task<IReadOnlyList<int>> GetIdsByTagAsync(
+        IEnumerable<int> tagIds,
+        CancellationToken cancellationToken = default)
+    {
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return Array.Empty<int>();
+        }
+
+        await using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        return await relationRepository.GetPostIdsByTagAsync(connection, tagIds, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<int>> GetTagIdsAsync(
+        int postId,
+        CancellationToken cancellationToken = default)
+    {
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return Array.Empty<int>();
+        }
+
+        await using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        return await relationRepository.GetTagIdsAsync(connection, postId, cancellationToken);
+    }
+
     public override Task<int> SaveAsync(WriteModel payload, CancellationToken cancellationToken = default)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -122,5 +154,64 @@ post_lang.[id];
             "tw" or "zh" or "zh-tw" or "zh-hant" => "tw",
             _ => "tw",
         };
+    }
+
+    private sealed class PostRelationRepository : BaseRelationRepository
+    {
+        public Task<IReadOnlyList<int>> GetTagIdsAsync(
+            SqlConnection connection,
+            int postId,
+            CancellationToken cancellationToken = default)
+        {
+            return FindRelationIdsByOwnerAsync(
+                connection,
+                "tag",
+                postId,
+                cancellationToken);
+        }
+
+        public Task<IReadOnlyList<int>> GetPostIdsByTagAsync(
+            SqlConnection connection,
+            IEnumerable<int> tagIds,
+            CancellationToken cancellationToken = default)
+        {
+            return FindOwnerIdsByRelationAsync(
+                connection,
+                "tag",
+                tagIds,
+                cancellationToken);
+        }
+
+        public Task SaveTagsAsync(
+            SqlConnection connection,
+            SqlTransaction transaction,
+            int postId,
+            IReadOnlyList<string> tagValues,
+            CancellationToken cancellationToken = default)
+        {
+            return ReplaceSaveManyAsync(
+                connection,
+                transaction,
+                "tag",
+                postId,
+                ParseTagIds(tagValues),
+                cancellationToken);
+        }
+
+        private static IReadOnlyList<int> ParseTagIds(IReadOnlyList<string> tagValues)
+        {
+            var parsedIds = new List<int>(tagValues.Count);
+            foreach (var tagValue in tagValues)
+            {
+                if (!int.TryParse(tagValue, out var tagId) || tagId <= 0)
+                {
+                    continue;
+                }
+
+                parsedIds.Add(tagId);
+            }
+
+            return parsedIds;
+        }
     }
 }

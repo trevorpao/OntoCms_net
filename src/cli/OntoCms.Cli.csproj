@@ -12,6 +12,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+    <PackageReference Include="SqlKata" Version="4.0.1" />
   </ItemGroup>
 
   <ItemGroup>

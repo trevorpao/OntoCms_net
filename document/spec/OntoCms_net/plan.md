@@ -50,7 +50,7 @@
 *   **Save Orchestration**：承接 `SaveAsync()` 主流程骨架、insert/update 分流、共通 transaction 持有，以及 `AfterSaveAsync()` hook。
 *   **Payload Normalization**：承接 `_handleColumn` 對應的欄位分流骨架，將主表欄位、`meta`、`lang` 與其他附屬資料拆開，但不在 BaseFeed 內替 entity 決定最終寫入順序。
 *   **Meta / Lang Persistence**：承接 `SaveMetaAsync()`、`SaveLangAsync()` 這類可重用的 `_meta` / `_lang` 寫入函式。
-*   **Thin Read Helpers**：承接 `OneAsync()`、`LotsAsync()`、`TotalAsync()`、`PaginateAsync()` 這類薄查詢 helper；複雜查詢維持直接 SQL。
+*   **Thin Read Helpers**：承接 `OneAsync()`、`LotsAsync()`、`LimitRowsAsync()` 這類薄查詢 helper；`SqlKata` 的 compile / execute 細節應集中在這些 owner-side 或 base-level 入口，複雜查詢維持直接 SQL。
 *   **Status / Delete Helpers**：承接 `PublishAsync()`、`ChangeStatusAsync()`、`DeleteRowAsync()` 這類單表共通操作。
 
 **不應放進 BaseFeedRepository<T> 的函式群**：
@@ -66,18 +66,23 @@
     *   第二個 slice 再補 Dapper 對主表 (Main Table) 的動態 Insert/Update 語法生成與 Audit Fields (`insert_ts`, `last_ts`, `insert_user`, `last_user`) 寫入，先只承接主表，不提前展開 `_lang` / `_meta`。
     *   若需要 QueryBuilder，只允許很薄的 where / order / paging 組裝；不可把整個 Feed 推向 ORM-style query abstraction。
     *   複雜查詢維持直接寫 SQL；若 Dapper 之外需要第二選項，僅考慮 `SqlKata` 作為薄 query builder，而不是改採重型 ORM。
+    *   `SqlKata` 的落點應對齊 PHP `Feed.php::exec` 的薄執行思路：只負責 compile 查詢與 bindings，實際執行、transaction 與 ownership orchestration 仍由 Dapper + Feed owner 承接。
 *   **Task 1.3: 多語系與中繼資料關聯寫入 (_afterSave)**
     *   第一個 slice 先補共通 transaction 與第一個 `_meta` caller：BaseFeedRepository 先承接 transaction wrapper 與 `SaveMetaAsync()`；第一個 caller 改落在有現成 `tbl_post_meta` 的 PostFeed，不在沒有 side table 的 OptionFeed 上硬做假 caller。
     *   第二個 slice 再補 `saveLang()`：利用 MSSQL 的 `MERGE INTO` 處理 `_lang` 表的 Upsert；第一個 caller 同樣落在有現成 `tbl_post_lang` 的 PostFeed，避免為了示範而在 OptionFeed 上製造不存在的 `_lang` 前提。
     *   驗證優先以顯式 CLI smoke command 承接，例如 `smoke:post-save`；不要為了驗證 save path 而先把 module save route 或 web API 擴張進 production request path。
     *   rollback 類 smoke command 已驗證完成：透過故意讓 `_lang` 欄位違反 constraint，確認主表、`_meta`、`_lang` 都不會部分殘留。
-    *   下一個最小 slice 應補第二個 caller，優先挑現成 schema 但較窄的 lang-only module，例如 `tbl_menu` + `tbl_menu_lang`，驗證 `SaveLangAsync()` 能重用於沒有 `_meta` 的 entity。
-    *   relation base 的第一個 caller 已由 `PostFeed` + `PostRelationRepository` 承接 `tbl_post_tag` 關閉；既有 `smoke:post-save` / `smoke:post-save-rollback` 也已擴充驗證 relation row 的成功寫入與 rollback。
+    *   第二個 lang-only caller 已由 `tbl_menu` + `tbl_menu_lang` 關閉，確認 `SaveLangAsync()` 可重用於沒有 `_meta` 的 entity。
+    *   relation base 的第一個 caller 已由 `PostFeed` 內的 owner-side private `PostRelationRepository` 承接 `tbl_post_tag` 關閉；既有 `smoke:post-save` / `smoke:post-save-rollback` 也已擴充驗證 relation row 的成功寫入與 rollback。
+    *   另一個 `_meta` caller 已由 `AdvFeed` 承接 `tbl_adv` + `tbl_adv_meta` + `tbl_adv_lang` 關閉，並由 `smoke:adv-save` 驗證成功。
+    *   relation base 的第二個單一行為已由 `PostFeed.GetIdsByTagAsync()` 承接 `tbl_post_tag` 的 `byTag` 查詢關閉，並由 `smoke:post-bytag` 驗證單 tag 與多 tag 交集行為成功。
+    *   relation read 的相鄰最小 slice 已由 `PostFeed.GetTagIdsAsync()` 關閉，對應 `lotsSub` 的 owner → relation ids 查詢，並由 `smoke:post-tagids` 驗證成功。
+    *   `SqlKata` 已先由 `OptionFeed.GetSiteTitleAsync()` 與 Feed/Relation base 的 read-side 小介面驗證成功；若要繼續擴充，應優先落在 list / paginate 類 read path，而不是改寫 save path。
     *   實作 `saveMeta()`：處理 `_meta` 表的鍵值對寫入。
     *   `BaseFeedRepository<T>` 只承接共通 CRUD / transaction；各 entity feed 仍必須自行決定主表、`_lang`、`_meta` 的寫入順序與 owner-side orchestration。
     *   確保 Task 1.2 與 1.3 包裝在同一個 `DbTransaction` 內。
     *   `Belong.php` 類的 relation 寫入（如 `saveMany` / `bind`）不納入本階段 FeedBase；若未來需要，另立 relation helper / base 再承接。
-    *   下一個 relation slice 應維持單一行為，例如另一個 `_meta` caller 以外的 counter / `byTag` 類 caller，而不是把 `Belong.php` 的 relation 能力一次 generic 化。
+    *   目前 `counter` 類 caller 仍缺少 schema-backed 落點；下一個 relation slice 若要維持單一行為，應先找到或引入真正具備 `<relation>_cnt` 欄位的 caller，再補 `counter`，而不是把 `Belong.php` 的 relation 能力一次 generic 化。
 *   **[驗收點]**：撰寫整合測試 (Integration Test)，傳入一份包含 title (`_lang`) 與 seo_desc (`_meta`) 的 Payload，驗證 Dapper 能正確分流並寫入三張表；同時確認 `BaseFeedRepository<T>` 只提供薄共通能力，不會把 Feed 推向 Entity Framework 式 ownership 混淆。
 
 #### Stage 2: 互動與權限治理 (Reaction & Auth 層)
@@ -87,6 +92,8 @@
     *   JSON envelope helper：成功 / 缺欄 / wrong-data / unverified 的共通 envelope 與 response helper。
     *   Request normalization helper：`id`、`query` 這類 backend 常用輸入的最薄 normalize / guard helper。
     *   Row / Save hook：`HandleRow()`、`HandleIteratee()`、`BeforeSaveAsync()` 這類可覆寫 hook，讓 entity reaction 只保留 owner-side rule。
+    *   Reaction feed contract：建立 `IReactionGetFeed<T>`、`IReactionListFeed<T>`、`IReactionOptionsFeed<T>` 這類最薄 shared contract，讓 `ReactGetAsync()` / `ReactSaveAsync()` / `ReactListAsync()` / `ReactGetOptionsAsync()` 可直接吃 feed-side contract，而不是每個 entity reaction 都重複組 delegate。
+    *   Contract 目標仍是薄接縫，不替 entity 決定 auth policy、validation rule 或 feed method 選擇；shared layer 只負責把 `Reaction.php` 風格的共用 flow 收斂到 ASP.NET Core controller base。
 *   **不應放進 ReactionBase 的函式群**：
     *   entity-specific auth policy、feed method 選擇、validation rule 定義、module reroute 規則。
     *   `Reaction.php` 裡動態反射 module/method dispatch 的 `do_rerouter()`，不直接搬進 ASP.NET Core；路由解析維持由 framework routing 與 module controller 明確宣告。
@@ -99,6 +106,7 @@
 *   **Task 2.3: Reaction API 控制器骨架**
     *   建立標準的 JSON 回應格式 (`{ status, data, error }`)。
     *   實作如 `rPost` 的 Controller，負責接收 Request、呼叫 Task 1 完成的 `Feed`，並回傳結果。
+    *   第一個 proof 可先用 `OptionReaction` 對 `OptionFeed` 落 `get` / `save`，驗證 entity reaction 只保留 route declaration 與 owner-side feed wiring；共用 flow 則由 `BaseReactionController` + reaction feed contract 承接。
 *   **[驗收點]**：未帶憑證或權限不足的請求呼叫 `Reaction` API 時，會被 Middleware 正確攔截；合法請求能正確觸發 `Feed` 寫入。
 
 #### Stage 3: WorkflowEngine MVP (Kit 工具層)

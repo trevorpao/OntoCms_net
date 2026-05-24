@@ -6,12 +6,15 @@ using System.Globalization;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using OntoCms.Conventions.Attributes;
+using SqlKata;
+using SqlKata.Compilers;
 
 namespace OntoCms.Conventions.HMVC;
 
 public abstract class BaseFeedRepository<TPayload> : IFeedRepository<TPayload>
     where TPayload : class
 {
+    private static readonly SqlServerCompiler sqlCompiler = new();
     private readonly Lazy<FeedMetadata> metadata;
 
     protected BaseFeedRepository()
@@ -318,6 +321,164 @@ WHEN NOT MATCHED THEN
         }
     }
 
+    protected static Query NewQuery(string tableName)
+    {
+        if (string.IsNullOrWhiteSpace(tableName))
+        {
+            throw new ArgumentException("Table name is required.", nameof(tableName));
+        }
+
+        return new Query(tableName);
+    }
+
+    protected static CommandDefinition CompileCommand(
+        Query query,
+        object? overrides = null,
+        SqlTransaction? transaction = null,
+        CancellationToken cancellationToken = default,
+        int? commandTimeout = 30)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        var compiled = sqlCompiler.Compile(query);
+        var parameters = new DynamicParameters();
+
+        foreach (var binding in compiled.NamedBindings)
+        {
+            parameters.Add(binding.Key, binding.Value);
+        }
+
+        if (overrides is not null)
+        {
+            parameters.AddDynamicParams(overrides);
+        }
+
+        return new CommandDefinition(
+            compiled.Sql,
+            parameters,
+            transaction,
+            commandTimeout,
+            cancellationToken: cancellationToken);
+    }
+
+    protected virtual int ReadLotsLimit()
+    {
+        return 500;
+    }
+
+    protected virtual int ReadPageLimit()
+    {
+        return 12;
+    }
+
+    protected async Task<IReadOnlyList<TResult>> LotsAsync<TResult>(
+        SqlConnection connection,
+        Query query,
+        CancellationToken cancellationToken = default,
+        int? limit = null)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        ArgumentNullException.ThrowIfNull(query);
+
+        var normalizedLimit = NormalizeReadLimit(limit, ReadLotsLimit());
+        var effectiveQuery = query.Clone();
+
+        if (normalizedLimit > 0 && !effectiveQuery.HasLimit())
+        {
+            effectiveQuery.Limit(normalizedLimit);
+        }
+
+        var rows = await connection.QueryAsync<TResult>(
+            CompileCommand(effectiveQuery, cancellationToken: cancellationToken));
+
+        return rows.ToArray();
+    }
+
+    protected async Task<TResult?> OneAsync<TResult>(
+        SqlConnection connection,
+        Query query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        ArgumentNullException.ThrowIfNull(query);
+
+        var effectiveQuery = query.Clone();
+
+        if (!effectiveQuery.HasLimit())
+        {
+            effectiveQuery.Limit(1);
+        }
+
+        return await connection.QueryFirstOrDefaultAsync<TResult>(
+            CompileCommand(effectiveQuery, cancellationToken: cancellationToken));
+    }
+
+    protected async Task<FeedPageResult<TResult>> LimitRowsAsync<TResult>(
+        SqlConnection connection,
+        Query query,
+        int page = 0,
+        int limit = 0,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        ArgumentNullException.ThrowIfNull(query);
+
+        var normalizedLimit = NormalizeReadLimit(limit, ReadPageLimit());
+        var totalQuery = BuildCountQuery(query);
+        var total = await connection.ExecuteScalarAsync<int>(
+            CompileCommand(totalQuery, cancellationToken: cancellationToken));
+
+        if (total <= 0)
+        {
+            return new FeedPageResult<TResult>(Array.Empty<TResult>(), 0, normalizedLimit, 0, 0);
+        }
+
+        var count = (int)Math.Ceiling(total / (double)normalizedLimit);
+        var pos = Math.Max(0, Math.Min(page, count - 1));
+
+        var subsetQuery = query.Clone()
+            .ClearComponent("limit")
+            .ClearComponent("offset")
+            .ForPage(pos + 1, normalizedLimit);
+
+        var subset = await connection.QueryAsync<TResult>(
+            CompileCommand(subsetQuery, cancellationToken: cancellationToken));
+
+        return new FeedPageResult<TResult>(subset.ToArray(), total, normalizedLimit, count, pos);
+    }
+
+    protected static Query BuildCountQuery(Query query)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        var countSource = query.Clone()
+            .ClearComponent("order")
+            .ClearComponent("limit")
+            .ClearComponent("offset")
+            .As("count_src");
+
+        return new Query()
+            .From(countSource)
+            .SelectRaw("COUNT(1) AS [count]");
+    }
+
+    private static int NormalizeReadLimit(int? requestedLimit, int defaultLimit)
+    {
+        if (requestedLimit.HasValue && requestedLimit.Value < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(requestedLimit), "Limit must be zero or positive.");
+        }
+
+        if (defaultLimit <= 0)
+        {
+            throw new InvalidOperationException("Default read limit must be positive.");
+        }
+
+        return requestedLimit.GetValueOrDefault() > 0
+            ? requestedLimit.Value
+            : defaultLimit;
+    }
+
     private async Task<int> InsertMainRowAsync(
         SqlConnection connection,
         IReadOnlyDictionary<string, object?> values,
@@ -608,3 +769,10 @@ WHERE [{PrimaryKeyColumn}] = @id;
         IReadOnlyDictionary<string, object?> Lang,
         IReadOnlyList<string> Tags);
 }
+
+public sealed record FeedPageResult<TResult>(
+    IReadOnlyList<TResult> Subset,
+    int Total,
+    int Limit,
+    int Count,
+    int Pos);

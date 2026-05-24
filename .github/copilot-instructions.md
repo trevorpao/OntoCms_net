@@ -3,6 +3,8 @@
 ## Build, Test, and Validation
 - Prefer the project's existing Docker environment for validation, smoke scripts, PHP execution, workflow verification, and post-change runtime checks.
 - Use existing `docker compose` services and container paths as the default baseline.
+- For day-to-day .NET web compile checks, prefer `bin/check-web.sh` first. It runs an incremental Docker-based `dotnet build` through the compose `cli` service and is cheaper than rebuilding the web image.
+- Reserve `docker compose --env-file .env -f conf/docker/docker-compose.yml build web` for image/publish validation, Dockerfile changes, or final runtime packaging checks.
 - Only fall back to local PHP when Docker is unavailable or explicitly required.
 
 ## Source of Truth and FDD
@@ -24,6 +26,23 @@
 - Avoid introducing or expanding dependencies on project-specific global helpers such as `mh()` or similar convenience entry points when a lower-coupling owner-side path exists.
 - For module `Kit` / `Feed` / `Reaction` decisions, preserve owner boundaries first; do not optimize for the shortest local wiring if that makes later FORK maintenance harder.
 - If a proposed change is locally convenient but creates extra FORK-only coupling, stop and either choose the lower-coupling design or explicitly tell the user about the tradeoff before implementing.
+- Keep relation helpers module-owned and owner-file-first; do not introduce standalone `relation.cs` module files unless the upstream/FORKS source already has a matching owner boundary to justify it.
+
+## Data Access Strategy
+- Treat Feed / relation data access as Dapper-first and SQL-first by default.
+- Keep SQL as a first-class artifact; do not hide ownership-heavy save flows behind tracking ORM patterns.
+- `SqlKata` is allowed only as a thin query-builder second option, mainly for read-side where / order / paging composition and SQL + bindings compilation.
+- Do not let `SqlKata` or any query-builder take over save / upsert / `_lang` / `_meta` / relation orchestration.
+- Feed owners must keep explicit control of CRUD, transaction boundaries, and write ordering.
+- Avoid introducing Entity Framework-style model tracking or abstractions that blur owner boundaries.
+
+### Data Access Checklist
+- Before adding any helper or abstraction, ask whether the SQL can stay explicit in the owner Feed / relation path.
+- Use raw Dapper first for save flows, owner-controlled CRUD, `_lang`, `_meta`, relation writes, and transaction-scoped orchestration.
+- Reach for `SqlKata` only when it makes a read-side query clearer through where / order / paging composition or SQL + bindings compilation.
+- If a design would make `SqlKata` decide write ordering, transaction boundaries, or relation ownership, reject it and keep that logic in the owner module.
+- When relation behavior is owner-specific, prefer a private/nested owner-side helper or owner-file implementation over a new standalone relation module file.
+- When `SqlKata` is used on the read-side, keep query compile / execute details behind a small owner-side or base-level interface instead of scattering them across feed / relation callers.
 
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.

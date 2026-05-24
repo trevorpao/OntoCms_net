@@ -2,11 +2,14 @@ using Dapper;
 using Microsoft.Data.SqlClient;
 using System.Reflection;
 using OntoCms.Conventions.Attributes;
+using SqlKata;
+using SqlKata.Compilers;
 
 namespace OntoCms.Conventions.HMVC;
 
 public abstract class BaseRelationRepository
 {
+    private static readonly SqlServerCompiler sqlCompiler = new();
     private readonly Lazy<RelationOwnerMetadata> ownerMetadata;
 
     protected BaseRelationRepository()
@@ -136,6 +139,121 @@ public abstract class BaseRelationRepository
                 commandTimeout: 30,
                 cancellationToken: cancellationToken));
         }
+    }
+
+    protected async Task<IReadOnlyList<int>> FindOwnerIdsByRelationAsync(
+        SqlConnection connection,
+        string relationName,
+        IEnumerable<int> relationIds,
+        CancellationToken cancellationToken = default,
+        bool reverse = false)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+
+        var distinctRelationIds = relationIds
+            .Where(static relationId => relationId > 0)
+            .Distinct()
+            .ToArray();
+
+        if (distinctRelationIds.Length == 0)
+        {
+            return Array.Empty<int>();
+        }
+
+        var metadata = CreateRelationMetadata(relationName, reverse);
+        var ownerKeyColumn = reverse ? metadata.RelationKeyColumn : metadata.OwnerKeyColumn;
+        var relationKeyColumn = reverse ? metadata.OwnerKeyColumn : metadata.RelationKeyColumn;
+
+        var query = NewReadQuery($"[dbo].[{metadata.RelationTableName}]")
+            .Select(ownerKeyColumn)
+            .WhereIn(relationKeyColumn, distinctRelationIds)
+            .GroupBy(ownerKeyColumn)
+            .HavingRaw($"COUNT(DISTINCT {Bracket(relationKeyColumn)}) = ?", distinctRelationIds.Length)
+            .OrderBy(ownerKeyColumn);
+
+        var rows = await ReadManyAsync<int>(connection, query, cancellationToken);
+
+        return rows.ToArray();
+    }
+
+    protected async Task<IReadOnlyList<int>> FindRelationIdsByOwnerAsync(
+        SqlConnection connection,
+        string relationName,
+        int ownerId,
+        CancellationToken cancellationToken = default,
+        bool reverse = false)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+
+        if (ownerId <= 0)
+        {
+            return Array.Empty<int>();
+        }
+
+        var metadata = CreateRelationMetadata(relationName, reverse);
+        var ownerKeyColumn = reverse ? metadata.RelationKeyColumn : metadata.OwnerKeyColumn;
+        var relationKeyColumn = reverse ? metadata.OwnerKeyColumn : metadata.RelationKeyColumn;
+
+        var query = NewReadQuery($"[dbo].[{metadata.RelationTableName}]")
+            .Select(relationKeyColumn)
+            .Where(ownerKeyColumn, ownerId)
+            .OrderBy(relationKeyColumn);
+
+        var rows = await ReadManyAsync<int>(connection, query, cancellationToken);
+
+        return rows.ToArray();
+    }
+
+    protected static Query NewReadQuery(string tableName)
+    {
+        if (string.IsNullOrWhiteSpace(tableName))
+        {
+            throw new ArgumentException("Table name is required.", nameof(tableName));
+        }
+
+        return new Query(tableName);
+    }
+
+    protected static CommandDefinition CompileReadCommand(
+        Query query,
+        object? overrides = null,
+        CancellationToken cancellationToken = default,
+        int? commandTimeout = 30)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        var compiled = sqlCompiler.Compile(query);
+        var parameters = new DynamicParameters();
+
+        foreach (var binding in compiled.NamedBindings)
+        {
+            parameters.Add(binding.Key, binding.Value);
+        }
+
+        if (overrides is not null)
+        {
+            parameters.AddDynamicParams(overrides);
+        }
+
+        return new CommandDefinition(
+            compiled.Sql,
+            parameters,
+            commandTimeout: commandTimeout,
+            cancellationToken: cancellationToken);
+    }
+
+    protected static async Task<IReadOnlyList<TResult>> ReadManyAsync<TResult>(
+        SqlConnection connection,
+        Query query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        ArgumentNullException.ThrowIfNull(query);
+
+        var rows = await connection.QueryAsync<TResult>(
+            CompileReadCommand(query, cancellationToken: cancellationToken));
+
+        return rows.ToArray();
     }
 
     private RelationOwnerMetadata BuildOwnerMetadata()

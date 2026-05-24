@@ -2,12 +2,14 @@ using Dapper;
 using Microsoft.Data.SqlClient;
 using OntoCms.Conventions.Attributes;
 using OntoCms.Conventions.HMVC;
+using SqlKata;
 
 namespace OntoCms.Modules.Option;
 
 [MTB("option")]
 [MULTILANG(false)]
 public sealed class OptionFeed : BaseFeedRepository<OptionFeed.WriteModel>
+    , IReactionGetFeed<OptionFeed.OptionRecord>
 {
     private readonly IConfiguration configuration;
 
@@ -24,26 +26,21 @@ public sealed class OptionFeed : BaseFeedRepository<OptionFeed.WriteModel>
             return null;
         }
 
-        const string sql = """
-SELECT TOP (1)
-    [id] AS [Id],
-    [group] AS [Group],
-    [loader] AS [Loader],
-    [status] AS [Status],
-    [name] AS [Name],
-    [content] AS [Content]
-FROM [dbo].[tbl_option]
-WHERE [id] = @Id
-ORDER BY [id];
-""";
+        var query = NewQuery("[dbo].[tbl_option]")
+            .Select(
+                "id as Id",
+                "group as [Group]",
+                "loader as Loader",
+                "status as Status",
+                "name as Name",
+                "content as Content")
+            .Where("id", id)
+            .OrderBy("id");
 
         await using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
 
-        return await connection.QueryFirstOrDefaultAsync<OptionRecord>(new CommandDefinition(
-            sql,
-            new { Id = id },
-            cancellationToken: cancellationToken));
+        return await OneAsync<OptionRecord>(connection, query, cancellationToken);
     }
 
     public async Task<string> GetSiteTitleAsync(CancellationToken cancellationToken)
@@ -54,26 +51,22 @@ ORDER BY [id];
             return "OntoCMS";
         }
 
-        const string sql = """
-SELECT TOP (1) [content]
-FROM [dbo].[tbl_option]
-WHERE [group] = @OptionGroup
-  AND [name] = @OptionName
-  AND [status] = N'Enabled'
-ORDER BY [id];
-""";
+        var query = NewQuery("[dbo].[tbl_option]")
+            .Select("content")
+            .Where("group", "page")
+            .Where("name", "title")
+            .Where("status", "Enabled")
+            .OrderBy("id");
 
         await using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
 
-        var siteTitle = await connection.QueryFirstOrDefaultAsync<string>(new CommandDefinition(
-            sql,
-            new
-            {
-                OptionGroup = "page",
-                OptionName = "title",
-            },
-            cancellationToken: cancellationToken));
+        var siteTitle = (await LotsAsync<string>(
+            connection,
+            query,
+            cancellationToken,
+            limit: 1))
+            .FirstOrDefault();
 
         return string.IsNullOrWhiteSpace(siteTitle) ? "OntoCMS" : siteTitle;
     }

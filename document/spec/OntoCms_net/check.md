@@ -43,6 +43,23 @@
 - [x] `bin/cli.sh smoke:menu-save` 已驗證通過，確認 `tbl_menu` 與 `tbl_menu_lang` 可由第二個 lang-only caller 正常寫入並清理
 - [x] `bin/cli.sh smoke:post-save` 已再次驗證通過，確認 `tbl_post`、`tbl_post_meta`、`tbl_post_lang`、`tbl_post_tag` 都可在同一個 save path 內正確寫入並清理
 - [x] `bin/cli.sh smoke:post-save-rollback` 已再次驗證通過，確認 `_lang` 失敗時 `tbl_post_tag` 也不會殘留 rollback 前 relation row
+- [x] 已新增 [src/Modules/Adv/feed.cs](src/Modules/Adv/feed.cs) 作為第二個 `_meta` caller，讓 `tbl_adv`、`tbl_adv_meta`、`tbl_adv_lang` 可共用主表、`_meta`、`_lang` save path
+- [x] 已在 [src/cli/Program.cs](src/cli/Program.cs) 補上 `smoke:adv-save` 命令，並透過 [src/cli/Smoke/AdvSaveSmoke.cs](src/cli/Smoke/AdvSaveSmoke.cs) 驗證 `AdvFeed` 的主表、`_meta`、`_lang` 寫入與清理
+- [x] `bin/cli.sh smoke:adv-save` 已驗證通過
+- [x] 已在 [src/conventions/HMVC/BaseRelationRepository.cs](src/conventions/HMVC/BaseRelationRepository.cs) 補上 relation owner-id 查詢 helper，承接 `byTag` 對應的單 tag / 多 tag 交集查詢
+- [x] 已讓 [src/Modules/Post/feed.cs](src/Modules/Post/feed.cs) 內的 owner-side relation helper 成為 relation read 的第二個 caller，補上 `PostFeed.GetIdsByTagAsync()`
+- [x] 已在 [src/cli/Program.cs](src/cli/Program.cs) 補上 `smoke:post-bytag` 命令，並透過 [src/cli/Smoke/PostSaveSmoke.cs](src/cli/Smoke/PostSaveSmoke.cs) 驗證單 tag 與多 tag 交集查詢
+- [x] `bin/cli.sh smoke:post-bytag` 已驗證通過
+- [x] 已在 [src/conventions/HMVC/BaseRelationRepository.cs](src/conventions/HMVC/BaseRelationRepository.cs) 補上 owner → relation ids 讀取 helper，承接 `lotsSub` 對應的最小 owner-side relation read
+- [x] 已讓 [src/Modules/Post/feed.cs](src/Modules/Post/feed.cs) 內的 owner-side relation helper 再補上 `PostFeed.GetTagIdsAsync()`
+- [x] 已在 [src/cli/Program.cs](src/cli/Program.cs) 補上 `smoke:post-tagids` 命令，並透過 [src/cli/Smoke/PostSaveSmoke.cs](src/cli/Smoke/PostSaveSmoke.cs) 驗證 owner → tag ids 讀取
+- [x] `bin/cli.sh smoke:post-tagids` 已驗證通過
+- [x] 已在 [src/conventions/HMVC/BaseFeedRepository.cs](src/conventions/HMVC/BaseFeedRepository.cs) 補上最小 SqlKata compile helper，讓 Feed 可選擇由 SqlKata 組查詢、仍由 Dapper 執行
+- [x] 已將 [src/Modules/Option/feed.cs](src/Modules/Option/feed.cs) 的 `GetSiteTitleAsync()` 改為第一個 SqlKata read-only pilot，既有 save path 未受影響
+- [x] 已在 [src/conventions/HMVC/BaseFeedRepository.cs](src/conventions/HMVC/BaseFeedRepository.cs) 補上 `OneAsync()`、`LotsAsync()`、`LimitRowsAsync()`，讓 Feed read-side 不直接散落 compile / execute 細節
+- [x] 已在 [src/conventions/HMVC/BaseRelationRepository.cs](src/conventions/HMVC/BaseRelationRepository.cs) 補上 `NewReadQuery()`、`CompileReadCommand()`、`ReadManyAsync()`，讓 relation read-side 同樣透過小介面承接 SqlKata + Dapper
+- [x] `docker compose --env-file .env -f conf/docker/docker-compose.yml build web` 已驗證通過，確認 web graph 可 restore/compile SqlKata pilot
+- [x] `bin/cli.sh smoke:adv-save` 已再次驗證通過，確認 cli graph 在 [bin/docker-cli-entrypoint.sh](bin/docker-cli-entrypoint.sh) 修正 restore 判斷後也可正常 restore/compile
 - [x] 已補上 `BaseFeedRepository<TPayload>` 最小骨架，能從 `MTB` / `MULTILANG` 解析 main/lang/meta table metadata 與 primary key helper
 - [x] `BaseFeedRepository<TPayload>` 加入後，`docker compose --env-file .env -f conf/docker/docker-compose.yml build web` 仍可成功編譯
 - [x] 已補上第一個 module-owned Feed 範例：`src/Modules/Option/feed.cs`、`reaction.cs`、`outfit.cs`、`kit.cs`、`smoke.cs`
@@ -70,7 +87,7 @@
 - [x] `bin/cli.sh smoke:menu-save` 已驗證通過，確認 `tbl_menu` 與 `tbl_menu_lang` 可由第二個 lang-only caller 正常寫入並清理
 - [x] 已獨立建立 [src/conventions/HMVC/BaseRelationRepository.cs](src/conventions/HMVC/BaseRelationRepository.cs)，承接 relation table/key helper 與 `saveMany` payload shaping，避免 relation 邏輯回流到 FeedBase
 - [x] 已在 [src/conventions/HMVC/BaseRelationRepository.cs](src/conventions/HMVC/BaseRelationRepository.cs) 補上最小 `saveMany` persistence，可在既有 transaction 內用 delete + insert 重建 owner relation rows
-- [x] 已新增 [src/Modules/Post/relation.cs](src/Modules/Post/relation.cs) 作為 relation base 的第一個 caller，讓 [src/Modules/Post/feed.cs](src/Modules/Post/feed.cs) 可將 `tags` payload 寫入 `tbl_post_tag`
+- [x] 已由 [src/Modules/Post/feed.cs](src/Modules/Post/feed.cs) 內的 owner-side private relation helper 承接 relation base 的第一個 caller，讓 Post save path 可將 `tags` payload 寫入 `tbl_post_tag`
 - [x] `bin/cli.sh smoke:post-save` 已再次驗證通過，確認 `tbl_post`、`tbl_post_meta`、`tbl_post_lang`、`tbl_post_tag` 都可在同一個 save path 內正確寫入並清理
 - [x] `bin/cli.sh smoke:post-save-rollback` 已再次驗證通過，確認 `_lang` 失敗時 `tbl_post_tag` 也不會殘留 rollback 前 relation row
 - [x] 已建立 [src/conventions/HMVC/BaseOutfitController.cs](src/conventions/HMVC/BaseOutfitController.cs)，承接 route lifecycle hook、theme render helper、breadcrumb/formatter helper
@@ -98,8 +115,12 @@
 - [x] Stage 1.2 的第一個可驗證行為已定為 `_handleColumn` 欄位分流，而非 audit fields 先行
 - [ ] 若引入第一個 `_lang` 之後還要擴充 FeedBase，下一步應優先補最小 runtime 驗證或第二個 caller，而不是把主表、`_lang`、`_meta` 的寫入順序上推成 generic magic
 - [ ] 若引入 QueryBuilder，需維持薄 where / order / paging 組裝；複雜查詢仍直接寫 SQL，第二選項僅考慮 `SqlKata`
-- [ ] relation base 的第一個 caller 已由 Post/tag 關閉；若要繼續擴充 relation，下一個最小 slice 應先挑另一個單一行為，例如 counter 或 `byTag`，不要一次把 `Belong.php` 整包搬入
-- [ ] 若要繼續擴充 Feed save path，下一個最小延伸應優先補另一個 `_meta` caller；relation base 的第一個 caller 已先由 Post/tag 覆蓋
+- [ ] `SqlKata` 已先落為 read-side compile helper + 小介面 + 單一/薄 caller；若要繼續擴充，下一步應優先挑 list/paginate 類 read path，不把 save/upsert/transaction orchestration 改寫成 builder-first
+- [x] relation base 的第一個 caller 已由 Post/tag 關閉；若要繼續擴充 relation，下一個最小 slice 應先挑另一個單一行為，例如 counter 或 `byTag`，不要一次把 `Belong.php` 整包搬入
+- [x] 若要繼續擴充 Feed save path，下一個最小延伸應優先補另一個 `_meta` caller；relation base 的第一個 caller 已先由 Post/tag 覆蓋
+- [x] 既有 `_meta` caller 已由 Post 與 Adv 覆蓋；若要繼續擴充 relation，下一個最小 slice 應優先補 relation base 的第二個單一行為，例如 counter 或 `byTag`
+- [x] relation base 的第二個單一行為已由 `byTag` 關閉；若要繼續擴充 relation，下一個最小 slice 應優先補 `counter` 類 caller
+- [ ] relation `counter` 目前缺少 schema-backed caller：現有 repo schema 尚未出現可直接對照 `<relation>_cnt` 的主表欄位；若要繼續擴充，下一步應先找到或引入真實 caller，再做 `counter`
 - [ ] 若要繼續擴充 OutfitBase，下一個最小 caller 應先落在 breadcrumb 或共通 theme render，不直接把 `Outfit.php` 的 static cache / XML/XLS 輸出整包搬入
 - [ ] 若要繼續擴充 ReactionBase，下一個最小 caller 應先落在 list/get/save 三者之一的共通 wrapper，不直接把 `Reaction.php` 的 dynamic rerouter 或 upload 流程整包搬入
 - [ ] 若要繼續擴充 KitBase，下一個最小 caller 應先落在 save/login 其中一組 validation rule wrapper，不直接把 `Staff/kit.php` 的 login/session/mail side effect 整包搬入

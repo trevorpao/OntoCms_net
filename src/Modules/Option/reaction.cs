@@ -17,20 +17,12 @@ public sealed class OptionReaction : BaseReactionController
     [HttpGet("get")]
     public async Task<IActionResult> Get([FromQuery] int id, CancellationToken cancellationToken)
     {
-        return await ExecuteReactionAsync(async token =>
-        {
-            if (!TryGetPositiveId(id, out var optionId))
-            {
-                return OkMissing();
-            }
+        return await ReactGetAsync(id, optionFeed, cancellationToken);
+    }
 
-            var option = await optionFeed.GetAsync(optionId, token);
-            if (option is null)
-            {
-                return OkMissing();
-            }
-
-            return OkDone(HandleRow(option));
-        }, cancellationToken);
+    [HttpPost("save")]
+    public async Task<IActionResult> Save([FromForm] OptionFeed.WriteModel payload, CancellationToken cancellationToken)
+    {
+        return await ReactSaveAsync(payload, optionFeed, cancellationToken);
     }
 }

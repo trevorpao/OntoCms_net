@@ -8,6 +8,112 @@ namespace OntoCms.Cli.Smoke;
 
 internal static class PostSaveSmoke
 {
+    public static async Task RunTagIdsAsync(IConfiguration configuration, ILogger logger, CancellationToken cancellationToken = default)
+    {
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException("DefaultConnection is not configured.");
+        }
+
+        var feed = new PostFeed(configuration);
+        var slug = $"smoke-post-tagids-{Guid.NewGuid():N}";
+        var rowId = 0;
+
+        try
+        {
+            rowId = await feed.SaveAsync(new PostFeed.WriteModel(
+                Id: 0,
+                Status: "Enabled",
+                Slug: slug,
+                Cover: string.Empty,
+                Layout: "normal",
+                Lang: new Dictionary<string, PostFeed.LangWriteModel>
+                {
+                    ["tw"] = new("TagIds 驗證文章", "tag ids content", "No"),
+                },
+                Tags: new[] { "101", "202" }),
+                cancellationToken);
+
+            var tagIds = await feed.GetTagIdsAsync(rowId, cancellationToken);
+
+            if (tagIds.Count != 2
+                || tagIds[0] != 101
+                || tagIds[1] != 202)
+            {
+                throw new InvalidOperationException("Post tag ids smoke validation failed.");
+            }
+
+            logger.LogInformation("Post tag ids smoke passed for row {RowId}.", rowId);
+        }
+        finally
+        {
+            await CleanupAsync(connectionString, rowId, slug, cancellationToken);
+        }
+    }
+
+    public static async Task RunByTagAsync(IConfiguration configuration, ILogger logger, CancellationToken cancellationToken = default)
+    {
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException("DefaultConnection is not configured.");
+        }
+
+        var feed = new PostFeed(configuration);
+        var primarySlug = $"smoke-post-bytag-primary-{Guid.NewGuid():N}";
+        var secondarySlug = $"smoke-post-bytag-secondary-{Guid.NewGuid():N}";
+        var primaryId = 0;
+        var secondaryId = 0;
+
+        try
+        {
+            primaryId = await feed.SaveAsync(new PostFeed.WriteModel(
+                Id: 0,
+                Status: "Enabled",
+                Slug: primarySlug,
+                Cover: string.Empty,
+                Layout: "normal",
+                Lang: new Dictionary<string, PostFeed.LangWriteModel>
+                {
+                    ["tw"] = new("ByTag 主文章", "primary bytag content", "No"),
+                },
+                Tags: new[] { "101", "202" }),
+                cancellationToken);
+
+            secondaryId = await feed.SaveAsync(new PostFeed.WriteModel(
+                Id: 0,
+                Status: "Enabled",
+                Slug: secondarySlug,
+                Cover: string.Empty,
+                Layout: "normal",
+                Lang: new Dictionary<string, PostFeed.LangWriteModel>
+                {
+                    ["tw"] = new("ByTag 次文章", "secondary bytag content", "No"),
+                },
+                Tags: new[] { "202" }),
+                cancellationToken);
+
+            var singleTag = await feed.GetIdsByTagAsync(new[] { 101 }, cancellationToken);
+            var intersectedTags = await feed.GetIdsByTagAsync(new[] { 101, 202 }, cancellationToken);
+
+            if (!singleTag.Contains(primaryId)
+                || singleTag.Contains(secondaryId)
+                || intersectedTags.Count != 1
+                || intersectedTags[0] != primaryId)
+            {
+                throw new InvalidOperationException("Post byTag smoke validation failed.");
+            }
+
+            logger.LogInformation("Post byTag smoke passed for rows {PrimaryId} and {SecondaryId}.", primaryId, secondaryId);
+        }
+        finally
+        {
+            await CleanupAsync(connectionString, primaryId, primarySlug, cancellationToken);
+            await CleanupAsync(connectionString, secondaryId, secondarySlug, cancellationToken);
+        }
+    }
+
     public static async Task RunAsync(IConfiguration configuration, ILogger logger, CancellationToken cancellationToken = default)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection");

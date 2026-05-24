@@ -4,7 +4,11 @@ WORKDIR /src
 COPY src/public/OntoCms.Web.csproj src/public/
 RUN dotnet restore src/public/OntoCms.Web.csproj
 
-COPY . .
+COPY src/public/ src/public/
+COPY src/conventions/ src/conventions/
+COPY src/Modules/ src/Modules/
+COPY src/theme/default/ src/theme/default/
+COPY document/sql/ document/sql/
 RUN dotnet publish src/public/OntoCms.Web.csproj -c Release -o /app/publish/web /p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final

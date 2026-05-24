@@ -146,6 +146,15 @@ FDD 不只要求文件有寫，還要求在判斷架構、術語、流程與 fea
 ### F3CMS 文件優先
 - 理解 F3CMS 架構、術語、責任邊界、流程時，應先以 `document/` 下的文件為主要真實來源，而不是直接套用 generic framework assumptions。
 - 若任務是架構、分層、名詞或流程判斷，優先讀 glossary / guides / reference / flow 等共用文件，再開始下結論。
+- 若任務涉及 Feed / relation 資料存取，預設應以 Dapper-first、SQL-first 為基準；`SqlKata` 僅作薄 query builder 第二選項，主要用於 read-side where / order / paging 與 SQL + bindings compile，不應接管 save / upsert / transaction / ownership orchestration。
+
+### Feed / Relation 資料存取檢查點
+- 動手前先問：這段 SQL 是否可以繼續明確留在 owner Feed / relation path，而不是被新的 generic helper 吸走。
+- save flow、owner-controlled CRUD、`_lang`、`_meta`、relation write 與 transaction-scoped orchestration，應優先維持 Dapper 顯式控制。
+- 只有在 read-side where / order / paging 組裝或 SQL + bindings compile 真的更清楚時，才引入 `SqlKata`。
+- 若某個設計讓 query builder 開始決定 write ordering、transaction boundary 或 relation ownership，應視為偏離，退回 owner-side 顯式實作。
+- relation helper 若屬 owner-specific 行為，預設應留在 owner file 或 owner-side private helper；若上游 / FORKS 沒有對應結構，不應另外長出獨立 `relation.cs` 模組檔案。
+- 若 read-side 採用 `SqlKata`，query compile / execute 細節應集中在小型 owner-side 或 base-level 介面，例如 `OneAsync` / `LotsAsync` / `LimitRowsAsync` 一類入口，而不是散落在各 feed / relation caller 內各自拼接與執行。
 
 ### Feature 文件承接優先序
 - 若任務位於 `document/spec/<feature>/`，先讀 `history.md`，用來判斷目前 stage、上一輪真正完成了什麼、下一步是什麼。
