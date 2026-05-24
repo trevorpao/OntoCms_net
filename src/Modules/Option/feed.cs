@@ -91,9 +91,8 @@ ORDER BY [id];
             actorUserId: 0,
             isInsert: payload.Id <= 0);
 
-        await using var connection = new SqlConnection(connectionString);
-        await connection.OpenAsync(cancellationToken);
-        return await SaveMainRowAsync(connection, columns, payload.Id, cancellationToken);
+        return await WithTransactionAsync(connectionString, (connection, transaction, token) =>
+            SaveMainRowAsync(connection, columns, payload.Id, transaction, token), cancellationToken);
     }
 
     public sealed record WriteModel(

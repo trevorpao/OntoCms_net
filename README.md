@@ -140,6 +140,67 @@ OntoCms_net/
 5. `bin/bootstrap-db.sh`
 以顯式命令方式執行資料庫 bootstrap。這個腳本會透過 container 內的 `OntoCms.Cli.dll` 執行 `db:bootstrap`，而不是把 bootstrap 綁回 web startup。
 
+### 2.2 macOS HTTPS 信任鏈
+如果希望在 macOS 瀏覽器中直接開啟 `https://loc.f3cms.com:4433/`，而不是每次用 `curl -k` 或手動略過警告，請先完成 hosts 與 mkcert 的本機設定。
+
+1. 安裝 mkcert 與 nss。
+
+```bash
+brew install mkcert nss
+```
+
+2. 確認 `loc.f3cms.com` 指向本機。
+
+```bash
+sudo sh -c 'printf "\n127.0.0.1 loc.f3cms.com\n" >> /etc/hosts'
+```
+
+若 `/etc/hosts` 已有這筆資料，不要重複追加。
+
+3. 執行 `bin/build.sh`。
+
+```bash
+bin/build.sh
+```
+
+這個腳本現在會先做以下事情，再進入 Docker build：
+
+```text
+mkcert -install
+mkcert loc.f3cms.com localhost 127.0.0.1 ::1
+openssl pkcs12 -export -> conf/iis/loc.f3cms.com.pfx
+```
+
+生成結果會放在 [conf/iis](conf/iis)：
+- `loc.f3cms.com.pem`
+- `loc.f3cms.com-key.pem`
+- `loc.f3cms.com.pfx`
+
+這些檔案已被 root [.gitignore](.gitignore) 排除，不會進 git。
+
+4. 啟動服務。
+
+```bash
+bin/up.sh
+```
+
+5. 直接在瀏覽器開啟：
+
+```text
+https://loc.f3cms.com:4433/
+```
+
+若要用 curl 驗證完整 host/path，可用：
+
+```bash
+curl -k --resolve loc.f3cms.com:4433:127.0.0.1 https://loc.f3cms.com:4433/
+```
+
+### 2.3 信任鏈注意事項
+1. `mkcert -install` 會把本機 CA 安裝到 macOS trust store；如果你使用 Firefox，還需要先安裝 `nss`，再重新執行一次 `mkcert -install`。
+2. repo 內的 Docker container 只負責讀取 [conf/iis](conf/iis) 的 `loc.f3cms.com.pfx`；不再於 container 內自生憑證。
+3. 若 shell 中的 `curl` 不是使用 macOS 系統 trust store，而是來自其他 OpenSSL 發行版，仍可能需要 `-k`；這不代表 Kestrel 沒有正確載入 mkcert 憑證。
+
 ### 3. 開發實務：新增一個實體 (New Entity)
 當架構決策確認需要新增 Entity 時，**最小變更路徑**如下：
 1. 撰寫與執行 `sql` (Schema DDL)。

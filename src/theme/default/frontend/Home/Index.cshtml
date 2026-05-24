@@ -1,13 +1,13 @@
-@model string
+@model OntoCms.Modules.Option.HomePageViewModel
 @{
     Layout = null;
 }
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="@Model.HtmlLang">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@Model</title>
+    <title>@Model.DocumentTitle</title>
     <style>
         :root {
             color-scheme: light;
@@ -31,7 +31,7 @@
             box-shadow: 0 24px 60px rgba(58, 44, 31, 0.12);
         }
 
-        p {
+        .eyebrow {
             margin: 0 0 1rem;
             font-size: 0.95rem;
             letter-spacing: 0.08em;
@@ -39,18 +39,65 @@
             color: #7a6757;
         }
 
+        .lang-switch {
+            display: flex;
+            gap: 0.75rem;
+            margin: 0 0 2rem;
+        }
+
+        .lang-switch a {
+            color: #7a6757;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            padding-bottom: 0.2rem;
+        }
+
+        .lang-switch a.active {
+            color: #1f1a16;
+            border-color: currentColor;
+        }
+
         h1 {
-            margin: 0;
+            margin: 0 0 1.5rem;
             font-size: clamp(2.5rem, 6vw, 4.5rem);
             font-weight: 500;
             line-height: 0.95;
+        }
+
+        article {
+            font-size: 1.05rem;
+            line-height: 1.75;
+            color: #34291f;
+        }
+
+        article p {
+            margin: 0 0 1rem;
+        }
+
+        .empty {
+            color: #7a6757;
+            font-style: italic;
         }
     </style>
 </head>
 <body>
     <main>
-        <p>OntoCms Walking Skeleton</p>
-        <h1>@Model</h1>
+        <p class="eyebrow">@Model.SiteTitle</p>
+        <nav class="lang-switch" aria-label="Language switch">
+            <a class="@(Model.CurrentLang == "tw" ? "active" : null)" href="@Model.ChineseAboutPath">中文</a>
+            <a class="@(Model.CurrentLang == "en" ? "active" : null)" href="@Model.EnglishAboutPath">English</a>
+        </nav>
+        <h1>@Model.PageTitle</h1>
+        <article>
+            @if (string.IsNullOrWhiteSpace(Model.Content))
+            {
+                <p class="empty">Content is not available yet.</p>
+            }
+            else
+            {
+                @Html.Raw(Model.Content)
+            }
+        </article>
     </main>
 </body>
 </html>

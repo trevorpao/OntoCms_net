@@ -9,6 +9,7 @@ builder.Services.AddControllersWithViews()
     });
 
 builder.Services.AddScoped<OntoCms.Modules.Option.OptionFeed>();
+builder.Services.AddScoped<OntoCms.Modules.Post.PostFeed>();
 
 var app = builder.Build();
 

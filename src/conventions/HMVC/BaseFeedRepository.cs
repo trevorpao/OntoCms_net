@@ -1,6 +1,8 @@
+using System.Collections;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Globalization;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using OntoCms.Conventions.Attributes;
@@ -148,19 +150,178 @@ public abstract class BaseFeedRepository<TPayload> : IFeedRepository<TPayload>
         SqlConnection connection,
         ColumnSplitResult columns,
         int id,
+        SqlTransaction? transaction = null,
         CancellationToken cancellationToken = default)
     {
         if (id > 0)
         {
-            return await UpdateMainRowAsync(connection, columns.Main, id, cancellationToken);
+            return await UpdateMainRowAsync(connection, columns.Main, id, transaction, cancellationToken);
         }
 
-        return await InsertMainRowAsync(connection, columns.Main, cancellationToken);
+        return await InsertMainRowAsync(connection, columns.Main, transaction, cancellationToken);
+    }
+
+    protected async Task SaveMetaAsync(
+        SqlConnection connection,
+        SqlTransaction transaction,
+        int parentId,
+        IReadOnlyDictionary<string, object?> values,
+        CancellationToken cancellationToken = default)
+    {
+        var deleteSql = $"DELETE FROM [dbo].[{MetaTableName}] WHERE [parent_id] = @ParentId;";
+        await connection.ExecuteAsync(new CommandDefinition(
+            deleteSql,
+            new { ParentId = parentId },
+            transaction,
+            commandTimeout: 30,
+            cancellationToken: cancellationToken));
+
+        if (values.Count == 0)
+        {
+            return;
+        }
+
+        var insertSql = $"""
+INSERT INTO [dbo].[{MetaTableName}] ([parent_id], [k], [v], [last_ts])
+VALUES (@ParentId, @Key, @Value, @Timestamp);
+""";
+
+        var timestamp = DateTimeOffset.UtcNow;
+        foreach (var item in values)
+        {
+            await connection.ExecuteAsync(new CommandDefinition(
+                insertSql,
+                new
+                {
+                    ParentId = parentId,
+                    Key = item.Key,
+                    Value = NormalizeMetaValue(item.Value),
+                    Timestamp = timestamp,
+                },
+                transaction,
+                commandTimeout: 30,
+                cancellationToken: cancellationToken));
+        }
+    }
+
+    protected async Task SaveLangAsync(
+        SqlConnection connection,
+        SqlTransaction transaction,
+        int parentId,
+        IReadOnlyDictionary<string, object?> values,
+        int actorUserId = 0,
+        CancellationToken cancellationToken = default)
+    {
+        if (!SupportsMultilang)
+        {
+            if (values.Count == 0)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException($"{GetType().Name} does not support _lang persistence.");
+        }
+
+        if (values.Count == 0)
+        {
+            return;
+        }
+
+        var activeRows = values
+            .Where(static item => !string.IsNullOrWhiteSpace(item.Key) && item.Value is not null)
+            .Select(item => new
+            {
+                Lang = item.Key.Trim(),
+                Values = ExtractNamedValues(item.Value),
+            })
+            .Where(static item => item.Values.Count > 0)
+            .ToArray();
+
+        if (activeRows.Length == 0)
+        {
+            return;
+        }
+
+        var timestamp = DateTimeOffset.UtcNow;
+
+        for (var index = 0; index < activeRows.Length; index++)
+        {
+            var row = activeRows[index];
+            var rowValues = new Dictionary<string, object?>(row.Values, StringComparer.OrdinalIgnoreCase)
+            {
+                ["lang"] = row.Lang,
+                ["parent_id"] = parentId,
+                ["last_ts"] = timestamp,
+                ["last_user"] = actorUserId,
+            };
+
+            rowValues.TryAdd("insert_ts", timestamp);
+            rowValues.TryAdd("insert_user", actorUserId);
+
+            var orderedColumns = rowValues.Keys.OrderBy(static column => column, StringComparer.OrdinalIgnoreCase).ToArray();
+            var updateColumns = orderedColumns
+                .Where(static column => !column.Equals("lang", StringComparison.OrdinalIgnoreCase)
+                    && !column.Equals("parent_id", StringComparison.OrdinalIgnoreCase)
+                    && !column.Equals("insert_ts", StringComparison.OrdinalIgnoreCase)
+                    && !column.Equals("insert_user", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            var parameters = new DynamicParameters();
+            var sourceColumns = new List<string>(orderedColumns.Length);
+            foreach (var column in orderedColumns)
+            {
+                var parameterName = $"p_{index}_{column}";
+                parameters.Add(parameterName, rowValues[column]);
+                sourceColumns.Add($"@{parameterName} AS {Bracket(column)}");
+            }
+
+            var sql = $"""
+MERGE [dbo].[{LangTableName}] AS target
+USING (SELECT {string.Join(", ", sourceColumns)}) AS source
+ON target.[parent_id] = source.[parent_id]
+AND target.[lang] = source.[lang]
+WHEN MATCHED THEN
+    UPDATE SET {string.Join(", ", updateColumns.Select(column => $"target.{Bracket(column)} = source.{Bracket(column)}"))}
+WHEN NOT MATCHED THEN
+    INSERT ({string.Join(", ", orderedColumns.Select(Bracket))})
+    VALUES ({string.Join(", ", orderedColumns.Select(column => $"source.{Bracket(column)}"))});
+""";
+
+            await connection.ExecuteAsync(new CommandDefinition(
+                sql,
+                parameters,
+                transaction,
+                commandTimeout: 30,
+                cancellationToken: cancellationToken));
+        }
+    }
+
+    protected async Task<TResult> WithTransactionAsync<TResult>(
+        string connectionString,
+        Func<SqlConnection, SqlTransaction, CancellationToken, Task<TResult>> action,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            var result = await action(connection, transaction, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return result;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 
     private async Task<int> InsertMainRowAsync(
         SqlConnection connection,
         IReadOnlyDictionary<string, object?> values,
+        SqlTransaction? transaction,
         CancellationToken cancellationToken)
     {
         if (values.Count == 0)
@@ -188,6 +349,7 @@ VALUES ({string.Join(", ", parameterNames)});
         return await connection.ExecuteScalarAsync<int>(new CommandDefinition(
             sql,
             parameters,
+            transaction,
             commandTimeout: 30,
             cancellationToken: cancellationToken));
     }
@@ -196,6 +358,7 @@ VALUES ({string.Join(", ", parameterNames)});
         SqlConnection connection,
         IReadOnlyDictionary<string, object?> values,
         int id,
+        SqlTransaction? transaction,
         CancellationToken cancellationToken)
     {
         if (values.Count == 0)
@@ -229,6 +392,7 @@ WHERE [{PrimaryKeyColumn}] = @id;
         return await connection.ExecuteScalarAsync<int>(new CommandDefinition(
             sql,
             parameters,
+            transaction,
             commandTimeout: 30,
             cancellationToken: cancellationToken));
     }
@@ -236,6 +400,81 @@ WHERE [{PrimaryKeyColumn}] = @id;
     private static string Bracket(string columnName)
     {
         return $"[{columnName.Replace("]", "]]", StringComparison.Ordinal)}]";
+    }
+
+    private static string? NormalizeMetaValue(object? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        if (value is string stringValue)
+        {
+            return stringValue.Trim();
+        }
+
+        if (value is System.Collections.IEnumerable && value is not string)
+        {
+            return JsonSerializer.Serialize(value);
+        }
+
+        return Convert.ToString(value, CultureInfo.InvariantCulture);
+    }
+
+    private Dictionary<string, object?> ExtractNamedValues(object? value)
+    {
+        var result = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+        if (value is null)
+        {
+            return result;
+        }
+
+        if (value is IReadOnlyDictionary<string, object?> readOnlyValues)
+        {
+            foreach (var item in readOnlyValues)
+            {
+                result[item.Key] = NormalizeColumnValue(item.Key, item.Value);
+            }
+
+            return result;
+        }
+
+        if (value is IDictionary<string, object?> values)
+        {
+            foreach (var item in values)
+            {
+                result[item.Key] = NormalizeColumnValue(item.Key, item.Value);
+            }
+
+            return result;
+        }
+
+        if (value is IDictionary dictionary)
+        {
+            foreach (DictionaryEntry item in dictionary)
+            {
+                if (item.Key is string key)
+                {
+                    result[key] = NormalizeColumnValue(key, item.Value);
+                }
+            }
+
+            return result;
+        }
+
+        foreach (var property in value.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public))
+        {
+            if (!property.CanRead)
+            {
+                continue;
+            }
+
+            var key = ResolvePayloadColumnName(property);
+            result[key] = NormalizeColumnValue(key, property.GetValue(value));
+        }
+
+        return result;
     }
 
     private static void CopyNamedValues(object? value, IDictionary<string, object?> target)
@@ -260,6 +499,19 @@ WHERE [{PrimaryKeyColumn}] = @id;
             foreach (var item in values)
             {
                 target[item.Key] = item.Value;
+            }
+
+            return;
+        }
+
+        if (value is IDictionary dictionary)
+        {
+            foreach (DictionaryEntry item in dictionary)
+            {
+                if (item.Key is string key)
+                {
+                    target[key] = item.Value;
+                }
             }
         }
     }

@@ -18,6 +18,7 @@
 - 已補上最薄的首頁 `HomeController` 與 Razor View，並以 Docker 驗證 `http://localhost:8080` 已可 SSR 顯示來自 `tbl_option` 中 `group = page`、`name = title` 的值 (`Demo`)。
 - 已補上最薄的 `api/option/get` endpoint，並以 Docker 驗證 `http://localhost:8080/api/option/get?id=1` 可返回 `id = 1` 的 option payload，與首頁顯示的 `Demo` 對齊。
 - 已補齊 Kestrel HTTPS 入口與自簽憑證生成，並以 `curl --resolve loc.f3cms.com:4433:127.0.0.1 -k` 驗證 `https://loc.f3cms.com:4433/` 與 `https://loc.f3cms.com:4433/api/option/get?id=1` 均已可用，完成 Stage 0 的最終入口驗收。
+- 開發 HTTPS 憑證初始化已從 container entrypoint 內的臨時 openssl 自生，改為 host-side 的 [bin/build.sh](bin/build.sh) 先用 `mkcert` + `openssl` 在 [conf/iis](conf/iis) 生成 `loc.f3cms.com.pfx`，再由 [conf/docker/docker-compose.yml](conf/docker/docker-compose.yml) 掛載進 `/https`；[conf/dotnet/entrypoint.sh](conf/dotnet/entrypoint.sh) 現在只檢查憑證存在，不再偷偷產證書。
 - 已開始 Stage 1.1 的第一個 Feed contract slice：在 `src/conventions` 補上 `IFeedRepository<TPayload>`、`MTBAttribute`、`MULTILANGAttribute`，並讓 web `.csproj` 實際把 conventions 檔案納入編譯；Docker build 驗證通過。
 - 已補上 `BaseFeedRepository<TPayload>` 最小骨架，先只承接 `MTB` / `MULTILANG` metadata 與 table helper（main/lang/meta、primary key），不提前展開 `_handleColumn`、`saveLang()` 或 transaction；Docker build 驗證通過。
 - 已把首頁 route 從 `src/public/Controllers/HomeController.cs` 收回 `src/Modules/Option/outfit.cs`，並讓 `OptionOutfit` 重用 `OptionFeed` 讀取站台名稱；首頁 view 已移到 `src/theme/default/frontend/Home/Index.cshtml`。
@@ -35,13 +36,29 @@
 - 已將 DB bootstrap 的承接位置再收斂為 [src/cli/Bootstrap/DatabaseBootstrapper.cs](src/cli/Bootstrap/DatabaseBootstrapper.cs)，避免把 CLI 專用實作放在 `public` 或 `conventions`；`public` host 只保留命令分流，CLI 實作本身改由獨立 `src/cli` 承接。
 - 已進一步將 DB bootstrap 正式切為獨立 CLI project：[src/cli/OntoCms.Cli.csproj](src/cli/OntoCms.Cli.csproj) 與 [src/cli/Program.cs](src/cli/Program.cs) 承接命令入口；[src/public/OntoCms.Web.csproj](src/public/OntoCms.Web.csproj) 不再編譯 `src/cli/**/*.cs`，production web build 與 CLI build 邊界已拆開。
 - 已完成 Stage 1.2 的第二個最小 slice：在 [src/conventions/HMVC/BaseFeedRepository.cs](src/conventions/HMVC/BaseFeedRepository.cs) 補上主表 insert/update SQL 生成與 audit fields (`insert_ts` / `last_ts` / `insert_user` / `last_user`) 寫入骨架；[src/Modules/Option/feed.cs](src/Modules/Option/feed.cs) 現在可作為第一個主表 save caller，先只承接 `tbl_option` 主表，不提前展開 `_lang` / `_meta`。
+- 已補上 Stage 1.3 的第一個最小 slice：在 [src/conventions/HMVC/BaseFeedRepository.cs](src/conventions/HMVC/BaseFeedRepository.cs) 補上共通 transaction wrapper 與 `SaveMetaAsync()`；同時新增 [src/Modules/Post/feed.cs](src/Modules/Post/feed.cs) 作為第一個 `_meta` caller。由於 `tbl_option` 本身沒有 `_meta` / `_lang` side table，這一輪明確改由有現成 `tbl_post_meta` 的 Post 承接，避免在 Option 上做假 caller。
+- 已補上 Stage 1.3 的第二個最小 slice：在 [src/conventions/HMVC/BaseFeedRepository.cs](src/conventions/HMVC/BaseFeedRepository.cs) 補上 `SaveLangAsync()`，以 `MERGE INTO` 承接 `_lang` upsert 與缺席語系清理；[src/Modules/Post/feed.cs](src/Modules/Post/feed.cs) 現在可在同一個 transaction 內同時承接主表、`_meta`、`_lang` 三段寫入，成為第一個 `_lang` caller。
+- 對照 PHP 版 `Feed.php::saveLang()` 後，已修正 [src/conventions/HMVC/BaseFeedRepository.cs](src/conventions/HMVC/BaseFeedRepository.cs) 的 `_lang` 語意：現在只 upsert payload 內提供的語系，不再因缺席語系或空 payload 刪除既有 `_lang` rows，與 PHP 版 `saveLang()` 的 owner-side承接更一致。
+- 已補上最小 runtime 驗證路徑：在 [src/cli/Program.cs](src/cli/Program.cs) 新增 `smoke:post-save` 命令，透過 [src/cli/Smoke/PostSaveSmoke.cs](src/cli/Smoke/PostSaveSmoke.cs) 實際驗證 `PostFeed` 的主表、`_meta`、`_lang` transaction save path，並在驗證後清理測試資料；Docker 路徑已驗證通過。
+- 已補上 rollback 類 smoke 驗證路徑：在 [src/cli/Program.cs](src/cli/Program.cs) 新增 `smoke:post-save-rollback` 命令，透過 [src/cli/Smoke/PostSaveSmoke.cs](src/cli/Smoke/PostSaveSmoke.cs) 故意讓 `_lang.from_ai` 違反 `CK_tbl_post_lang_from_ai`，並已用 Docker 驗證 `PostFeed.SaveAsync()` 失敗時 transaction 會 rollback，`tbl_post`、`tbl_post_meta`、`tbl_post_lang` 都不殘留 partial row。
+- 已補上第二個 Feed save caller：新增 [src/Modules/Menu/feed.cs](src/Modules/Menu/feed.cs) 作為 lang-only entity 的最小 caller，讓 `tbl_menu` + `tbl_menu_lang` 在不經 `_meta` 的前提下也可重用 `BaseFeedRepository` 的主表 + `_lang` save path；同時新增 [src/cli/Smoke/MenuSaveSmoke.cs](src/cli/Smoke/MenuSaveSmoke.cs) 與 `smoke:menu-save` 做 Docker runtime 驗證。
+- `smoke:menu-save` 已用 Docker 驗證通過，確認第二個 caller 不需要 `_meta` 也能正確完成主表與 `_lang` 寫入，並在 smoke 結束後清理測試資料。
+- 已把首頁改為由 Post 承接內容來源：目前 [src/Modules/Option/outfit.cs](src/Modules/Option/outfit.cs) 會讀取 `slug = about` 的 `PostFeed` 發布內容作為首頁主文，並以 querystring `?lang=tw|en` 切換中英語系；site title 仍沿用 `tbl_option.page/title` 作為頁首與 document title 的輔助資訊。
+- 已新增 [document/sql/260524.sql](document/sql/260524.sql) 作為 about 首頁內容的 idempotent 增量資料，並以 Docker 現場套用後驗證 `http://localhost:8080/?lang=tw` 與 `http://localhost:8080/?lang=en` 都可正確返回首頁內容。
+- 已把前台語言解析收斂到 [src/conventions/HMVC/BaseOutfitController.cs](src/conventions/HMVC/BaseOutfitController.cs) 的共通 helper，依 F3CMS 最小優先序承接 route → query → cookie → default fallback，並在 route/query 明確指定語言時回寫 `user_lang` cookie。
+- 已補上首頁的語系前綴路由：目前 [src/Modules/Option/outfit.cs](src/Modules/Option/outfit.cs) 同時支援 `/`、`/about`、`/tw`、`/en`、`/tw/about`、`/en/about`；首頁語言切換連結也已改用前綴路徑而非 querystring。
+- 已用 Docker runtime + curl 驗證首頁語言規則：`/` 走 default fallback、`/en/about` 走 route、帶 `user_lang=en` 的 `/about` 走 cookie、`/about?lang=tw` 可覆蓋 cookie、`/tw/about?lang=en` 仍以 route 優先。
+- 已將語言決策規則自 [src/conventions/HMVC/BaseOutfitController.cs](src/conventions/HMVC/BaseOutfitController.cs) 抽出並泛化為 [src/conventions/HMVC/ForkLanguageResolver.cs](src/conventions/HMVC/ForkLanguageResolver.cs)，避免 lang helper 被綁死在 Outfit fork；目前 `BaseOutfitController` 與 [src/conventions/HMVC/BaseReactionController.cs](src/conventions/HMVC/BaseReactionController.cs) 都只保留 HTTP request/cookie 的薄 adapter。
 
 ### Drift
 - 原始文件的 bootstrap 前提漂移已完成第一輪對齊，目前已不再是假設 Docker / `.NET` artifact 存在，而是已落地為實際 repo 結構。
 - Stage 0 原先假設「web startup 自動 bootstrap DB」，但這會把營運修復動作綁進正常啟動路徑；本輪已改回顯式 CLI 模型，關閉這段 runtime / operations drift。
 - 文件曾將首頁來源寫成抽象的 `site_name`，但目前實際 seed 與實作都以 `tbl_option` 中 `group = page`、`name = title` 為準；本輪已完成文件對齊。
+- 首頁主內容原先只承接 `tbl_option.page/title` 的 walking skeleton，與現在要用 Post 建立首頁的需求不一致；本輪已把首頁主內容切到 `slug = about` 的 Post，並保留 `tbl_option.page/title` 作為 site title，關閉這段首頁內容來源 drift。
+- 首頁語言切換原先只靠 `?lang=tw|en`，與 F3CMS 既有的 `/{lang}/...` 前綴規則不一致；本輪已補上 route prefix 與共通語言 helper，關閉這段多語系 route drift。
 - Gene Panel 參考文件中的 `option/get` 範例仍沿用舊的 `group = site`、`name = site_name` 假設；本輪已同步改回目前 seed 事實。
 - 目前剩餘的不是 repo 內 runtime gap，而是本機若要在瀏覽器直接輸入 `loc.f3cms.com`，仍需外部 DNS 或 hosts 設定；repo 內已完成 HTTPS service、憑證與 4433 port mapping，本輪驗收以 `curl --resolve` 關閉此差距。
+- `conf/iis` 現在作為開發 HTTPS 憑證落點，但實際 `.pem` / `.key` / `.pfx` 已改由 root `.gitignore` 排除，只保留 `.gitkeep`，避免憑證進入 git。
 - `src/conventions` 原本只有目錄骨架，尚未被任何 `.csproj` 編譯；若直接在此落地 Feed contract，會形成「文件有分層、實際 build 卻不承接」的程式 / 文件漂移。本輪已先補齊這個編譯邊界。
 - 首頁與 Option API 原先仍分散在 `src/public`，與 module owner / theme owner 結構不一致；本輪已把 route 與 view 移回 `src/Modules/Option` 與 `src/theme/default/frontend`，關閉這段 owner-boundary drift。
 - 先前 Stage 1 文件雖然已選 Dapper，但尚未把 FeedBase 的責任邊界寫清楚；本輪已把「Dapper-first、SQL-first、薄 QueryBuilder、entity-owned write order、`SqlKata` 僅作第二選項」補成明確規則。
@@ -53,4 +70,4 @@
 - 先前 repo 沒有任何 SmokeBase，導致 `Smoke.php` 裡可共用的 contract dispatch 與錯誤類型沒有承接點；本輪已補上最小 `BaseSmoke`，但仍刻意排除 `Mobile/smoke.php` 類 module-owned DB bootstrap / assertion / cleanup。
 
 ### Next Step
-- 進入下一個最小步驟前，Stage 1.2 已完成 `_handleColumn` 與主表 audit/save skeleton；下一步應補 transaction 與第一個 `_meta` 或 `_lang` caller，但仍不把寫入順序上推成 generic magic。
+- 進入下一個最小步驟前，Stage 1.2 與 Stage 1.3 的 `_meta` / `_lang` 第一個 caller、最小 runtime 驗證、rollback smoke、與第二個 lang-only caller 都已完成；下一步應優先轉向 relation base 的第一個 caller，或另一個 `_meta` caller，而不是把寫入順序上推成 generic magic。

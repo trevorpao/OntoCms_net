@@ -39,7 +39,8 @@
     *   建立基礎 `HomeController` (Outfit 層) 與對應的 Razor View。
     *   從 MSSQL 讀取一筆 `tbl_option` 中 `group = page`、`name = title` 的系統名稱並渲染於網頁上，驗證連線與 SSR 正常。
     *   驗證入口固定為首頁 `https://loc.f3cms.com:4433/`，並以 `https://loc.f3cms.com:4433/api/option/get?id=1` 作為同一筆 `tbl_option` 的 API cross-check。
-*   **[驗收點]**：先以獨立 CLI 完成 DB bootstrap，再執行 `docker compose --env-file .env -f conf/docker/docker-compose.yml up`；之後開啟 `https://loc.f3cms.com:4433/` 能正確渲染帶有 `tbl_option.page/title` 的 SSR 首頁，且 `https://loc.f3cms.com:4433/api/option/get?id=1` 可返回對應 Option 資料，無編譯或連線錯誤。
+*   **[驗收點]**：先以獨立 CLI 完成 DB bootstrap，再執行 `docker compose --env-file .env -f conf/docker/docker-compose.yml up`；之後開啟 `https://loc.f3cms.com:4433/` 能正確渲染帶有 `tbl_option.page/title` site title 與 `tbl_post.slug = about` 首頁主內容的 SSR 首頁，且 `https://loc.f3cms.com:4433/api/option/get?id=1` 可返回對應 Option 資料，無編譯或連線錯誤。
+*   **補充規則**：前台多語系頁面應優先承接 F3CMS 的 route-first 規則，至少同時支援無前綴與 `/{lang}/...` 前綴兩套路由；目前最小 helper 已先收斂 route → query → cookie → default fallback。
 
 #### Stage 1: 實體資料生命週期 (Feed 層核心實作)
 **目標**：以 Dapper 作為第一選擇，實作 OntoCMS 靈魂的 `BaseFeedRepository<T>`，維持 SQL 為第一級公民，避免 ORM magic 模糊 owner boundary。
@@ -66,7 +67,11 @@
     *   若需要 QueryBuilder，只允許很薄的 where / order / paging 組裝；不可把整個 Feed 推向 ORM-style query abstraction。
     *   複雜查詢維持直接寫 SQL；若 Dapper 之外需要第二選項，僅考慮 `SqlKata` 作為薄 query builder，而不是改採重型 ORM。
 *   **Task 1.3: 多語系與中繼資料關聯寫入 (_afterSave)**
-    *   實作 `saveLang()`：利用 MSSQL 的 `MERGE INTO` 處理 `_lang` 表的 Upsert。
+    *   第一個 slice 先補共通 transaction 與第一個 `_meta` caller：BaseFeedRepository 先承接 transaction wrapper 與 `SaveMetaAsync()`；第一個 caller 改落在有現成 `tbl_post_meta` 的 PostFeed，不在沒有 side table 的 OptionFeed 上硬做假 caller。
+    *   第二個 slice 再補 `saveLang()`：利用 MSSQL 的 `MERGE INTO` 處理 `_lang` 表的 Upsert；第一個 caller 同樣落在有現成 `tbl_post_lang` 的 PostFeed，避免為了示範而在 OptionFeed 上製造不存在的 `_lang` 前提。
+    *   驗證優先以顯式 CLI smoke command 承接，例如 `smoke:post-save`；不要為了驗證 save path 而先把 module save route 或 web API 擴張進 production request path。
+    *   rollback 類 smoke command 已驗證完成：透過故意讓 `_lang` 欄位違反 constraint，確認主表、`_meta`、`_lang` 都不會部分殘留。
+    *   下一個最小 slice 應補第二個 caller，優先挑現成 schema 但較窄的 lang-only module，例如 `tbl_menu` + `tbl_menu_lang`，驗證 `SaveLangAsync()` 能重用於沒有 `_meta` 的 entity。
     *   實作 `saveMeta()`：處理 `_meta` 表的鍵值對寫入。
     *   `BaseFeedRepository<T>` 只承接共通 CRUD / transaction；各 entity feed 仍必須自行決定主表、`_lang`、`_meta` 的寫入順序與 owner-side orchestration。
     *   確保 Task 1.2 與 1.3 包裝在同一個 `DbTransaction` 內。

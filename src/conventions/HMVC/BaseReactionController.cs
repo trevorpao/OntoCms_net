@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace OntoCms.Conventions.HMVC;
@@ -61,6 +62,43 @@ public abstract class BaseReactionController : ControllerBase
     {
         normalizedId = id;
         return normalizedId > 0;
+    }
+
+    protected string ResolveReactionLanguage(
+        string? routeLang,
+        string? queryLang,
+        IReadOnlyCollection<string>? supportedLanguages = null,
+        string defaultLang = "tw",
+        string cookieName = "user_lang")
+    {
+        return ForkLanguageResolver.Resolve(
+            routeLang,
+            queryLang,
+            Request.Cookies[cookieName],
+            supportedLanguages,
+            defaultLang);
+    }
+
+    protected void PersistReactionLanguageCookie(
+        string resolvedLang,
+        string? routeLang,
+        string? queryLang,
+        IReadOnlyCollection<string>? supportedLanguages = null,
+        string defaultLang = "tw",
+        string cookieName = "user_lang")
+    {
+        if (!ForkLanguageResolver.ShouldPersistCookie(routeLang, queryLang, supportedLanguages, defaultLang))
+        {
+            return;
+        }
+
+        Response.Cookies.Append(cookieName, resolvedLang, new CookieOptions
+        {
+            HttpOnly = false,
+            IsEssential = true,
+            SameSite = SameSiteMode.Lax,
+            Expires = DateTimeOffset.UtcNow.AddDays(30),
+        });
     }
 
     protected OkObjectResult OkDone(object? data = null, string csrf = "")
