@@ -10,6 +10,7 @@ namespace OntoCms.Modules.Option;
 [MULTILANG(false)]
 public sealed class OptionFeed : BaseFeedRepository<OptionFeed.WriteModel>
     , IReactionGetFeed<OptionFeed.OptionRecord>
+    , IReactionDeleteFeed
     , IReactionListFeed<OptionFeed.OptionRecord>
     , IReactionOptionsFeed<OptionFeed.OptionOption>
 {
@@ -28,7 +29,7 @@ public sealed class OptionFeed : BaseFeedRepository<OptionFeed.WriteModel>
             return null;
         }
 
-        var query = NewQuery("[dbo].[tbl_option]")
+        var query = NewQuery("dbo.tbl_option")
             .Select(
                 "id as Id",
                 "group as [Group]",
@@ -58,7 +59,7 @@ public sealed class OptionFeed : BaseFeedRepository<OptionFeed.WriteModel>
         }
 
         var normalizedQuery = query.Trim();
-        var rowsQuery = NewQuery("[dbo].[tbl_option]")
+        var rowsQuery = NewQuery("dbo.tbl_option")
             .Select(
                 "id as Id",
                 "group as [Group]",
@@ -94,7 +95,7 @@ public sealed class OptionFeed : BaseFeedRepository<OptionFeed.WriteModel>
         }
 
         var normalizedQuery = query.Trim();
-        var optionsQuery = NewQuery("[dbo].[tbl_option]")
+        var optionsQuery = NewQuery("dbo.tbl_option")
             .Select(
                 "id as Id",
                 "name as Title")
@@ -116,6 +117,20 @@ public sealed class OptionFeed : BaseFeedRepository<OptionFeed.WriteModel>
         return await LotsAsync<OptionOption>(connection, optionsQuery, cancellationToken);
     }
 
+    public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException("DefaultConnection is not configured.");
+        }
+
+        return await WithTransactionAsync(
+            connectionString,
+            (connection, transaction, token) => DeleteMainRowAsync(connection, id, transaction, token),
+            cancellationToken);
+    }
+
     public async Task<string> GetSiteTitleAsync(CancellationToken cancellationToken)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -124,7 +139,7 @@ public sealed class OptionFeed : BaseFeedRepository<OptionFeed.WriteModel>
             return "OntoCMS";
         }
 
-        var query = NewQuery("[dbo].[tbl_option]")
+        var query = NewQuery("dbo.tbl_option")
             .Select("content")
             .Where("group", "page")
             .Where("name", "title")
@@ -163,11 +178,11 @@ public sealed class OptionFeed : BaseFeedRepository<OptionFeed.WriteModel>
 
     public sealed record WriteModel(
         int Id,
-        string Group,
-        string Loader,
-        string Status,
-        string Name,
-        string Content,
+        string? Group,
+        string? Loader,
+        string? Status,
+        string? Name,
+        string? Content,
         IReadOnlyDictionary<string, object?>? Meta = null,
         IReadOnlyDictionary<string, object?>? Lang = null,
         IReadOnlyList<string>? Tags = null);

@@ -10,6 +10,7 @@ builder.Services.AddControllersWithViews()
 
 builder.Services.AddScoped<OntoCms.Modules.Option.OptionFeed>();
 builder.Services.AddScoped<OntoCms.Modules.Post.PostFeed>();
+builder.Services.AddScoped<OntoCms.Modules.Role.RoleFeed>();
 
 var app = builder.Build();
 

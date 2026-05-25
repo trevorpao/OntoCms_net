@@ -20,6 +20,12 @@ public sealed class OptionReaction : BaseReactionController
         return await ReactGetAsync(id, optionFeed, cancellationToken);
     }
 
+    [HttpPost("del")]
+    public async Task<IActionResult> Delete([FromForm] int id, CancellationToken cancellationToken)
+    {
+        return await ReactDeleteAsync(id, optionFeed, cancellationToken);
+    }
+
     [HttpGet("list")]
     public async Task<IActionResult> List(
         [FromQuery] string? query,
@@ -39,6 +45,6 @@ public sealed class OptionReaction : BaseReactionController
     [HttpPost("save")]
     public async Task<IActionResult> Save([FromForm] OptionFeed.WriteModel payload, CancellationToken cancellationToken)
     {
-        return await ReactSaveAsync(payload, optionFeed, cancellationToken);
+        return await ReactSaveAsync(payload, OptionKit.Rule, optionFeed, cancellationToken);
     }
 }

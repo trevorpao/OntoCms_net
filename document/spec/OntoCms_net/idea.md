@@ -19,7 +19,7 @@
 ### 3. 範圍 (Scope)
 *   **底層架構映射 (Architecture Mapping)**：實作 ASP.NET Core 的 Web API (`Reaction` 互動層) 與 MVC Razor Pages (`Outfit` 畫面層)，提供伺服器端渲染 (SSR) 以確保 SEO 與載入效能。
 *   **實體資料生命週期 (Entity Feed Layer)**：基於 Dapper 實作泛型的 `BaseFeedRepository<T>`，精準承接主表 (`Main`)、多語系表 (`_lang`) 與中繼資料表 (`_meta`) 的分段寫入 (`_handleColumn`, `_afterSave`) 邏輯。
-*   **認證授權 (Identity & Auth)**：沿用舊有的 `tbl_staff` 與 `tbl_role` 資料表，實作 C# 自訂的 Claim-based Authorization (宣告式授權) 中介軟體。
+*   **認證授權 (Identity & Auth)**：沿用舊有的 `tbl_staff` 與 `tbl_role` 資料表，先由 `Role` entity 對齊 PHP FORKS 的 `priv` bitmask、權限選項與 parse / reverse / hasAuth helper，再讓 staff login 以這個 owner-side mapping 轉成 C# Claims，實作 Claim-based Authorization (宣告式授權) 中介軟體。
 *   **工作流引擎 (WorkflowEngine MVP)**：於 `libs/` 移植核心概念，支援讀取 JSON 定義檔與基礎的狀態切換防護，業務軌跡由各模組自有的 Log 表 (Module-owned log) 承接。
 *   **Schema 轉換與基礎植入 (Migration & Seeding)**：撰寫一次性 DDL 腳本轉換 MySQL 至 MSSQL 型別，並將原 `init.sql` 中的系統選單 (`Menu`)、系統選項 (`Option`)、預設角色 (`Role`) 等最小運作資料移植至新庫。
 
@@ -30,7 +30,7 @@
 
 ### 5. 核心物件與模組邊界 (Core Objects & Module Boundaries)
 系統嚴格遵守 OntoCMS 的核心規範「一個實體對應一個模組」：
-*   **`Staff / Role` (治理模組)**：管理單一 CMS 後台的帳號、權限邊界與認證狀態。
+*   **`Staff / Role` (治理模組)**：管理單一 CMS 後台的帳號、權限邊界與認證狀態；其中 `Role` 必須先擁有 `priv` bitmask、權限 option、parse / reverse / hasAuth 等 owner-side helper，`Staff` login 只消費 `Role` 已定義的權限映射，不在登入流程內重做一份 permission 規則。
 *   **`Feed` (資料生命週期核心類別)**：所有業務模組的資料操作根基，負責攔截並拆解對主表、`_lang` 與 `_meta` 的 CRUD。
 *   **`Menu / Option` (配置模組)**：維持系統的後台導覽與全域參數設定。
 *   **`WorkflowEngine` (工具模組)**：作為無狀態的規則引擎，讀取各模組的 Flow JSON 進行決策，絕不反向干涉業務模組的資料庫 Schema。
@@ -51,7 +51,7 @@
 ### 9. 風險與業務決策 (Risks and Key Decisions)
 *   *(已決議)* **命名與精神**：定名為 **OntoCMS**，強調實體優先 (Entity-First) 的架構約束。
 *   *(已決議)* **目標定位**：確認 OntoCMS 為單站基礎 CMS 框架，剝離複雜的多站共構邏輯。
-*   *(已決議)* **認證授權**：捨棄肥重的 ASP.NET Identity，沿用舊有 `tbl_staff` 與 `tbl_role` 結合 Claim-based Auth。
+*   *(已決議)* **認證授權**：捨棄肥重的 ASP.NET Identity，沿用舊有 `tbl_staff` 與 `tbl_role` 結合 Claim-based Auth；其中 staff login 的基本角色權限對應必須以前置的 `Role` entity baseline 為真實來源，不可在 `AuthenticationHandler` 內另造一套 role/permission mapping。
 *   *(已決議)* **資料移轉**：採 Zero Business Data 策略，僅進行 Schema 轉換與 `init.sql` 基礎系統資料 (Seeding) 植入。
 
 ---
@@ -72,7 +72,14 @@
 *   **Then (那麼)** ASP.NET Core 的 Auth Middleware 應在讀取 User Claims 後，於進入 Controller 前直接攔截請求。
 *   **And (並且)** 系統回傳 HTTP 403 Forbidden，確保未授權的操作絕對無法觸及 `Feed` 層。
 
-**【情境三】Walking Skeleton 首頁與 Option API 對齊驗證**
+**【情境三】Staff 登入的基本角色權限對應**
+*說明：驗證 staff login 不會自己發明 permission 規則，而是以前置 `Role` entity 提供的權限映射作為 claims 真實來源*。
+*   **Given (假設)** `Role` entity 已對齊 PHP `modules/Role` 的最小 owner boundary，能提供 `priv` bitmask 對應的權限名稱清單、權限 option 與 `hasAuth` 類 helper，且某個 staff 已關聯到一筆有效 `tbl_role`。
+*   **When (當)** 該 staff 成功登入後台，`AuthenticationHandler` 讀取 `tbl_staff` 與對應 `tbl_role`。
+*   **Then (那麼)** 登入流程應使用 `Role` entity 已定義的權限映射，把 role `priv` 轉成 `.NET Claims`，而不是在 handler 內硬編碼 module 權限表。
+*   **And (並且)** 後續 `Reaction` / `Outfit` 的授權判斷應消費同一份 claims / authority 語意，確保 login 與 request-time authorization 來自同一個 role source of truth。
+
+**【情境四】Walking Skeleton 首頁與 Option API 對齊驗證**
 *說明：驗證目前 Stage 0 的最小外部可見路徑已經對齊既定入口，首頁與 API 都以同一筆 `tbl_option` 站台標題為真實來源*。
 *   **Given (假設)** 系統已透過明確 CLI 完成 DB bootstrap，且 `tbl_option` 內存在 `group = page`、`name = title` 的設定值。
 *   **When (當)** 使用者開啟首頁 `https://loc.f3cms.com:4433/`。

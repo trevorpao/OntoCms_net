@@ -87,6 +87,11 @@
 
 #### Stage 2: 互動與權限治理 (Reaction & Auth 層)
 **目標**：基於舊表建立 C# 權限攔截網，並實作標準的 API 回應層。
+*   **Task 2.0: Role Entity Baseline 先行**
+    *   在進入登入 / `AuthenticationHandler` 之前，先參考 PHP 的 `docker-f3cms/www/f3cms/modules/Role` FORKS，建立 `.NET` 版的 `Role` entity baseline，而不是先把 login / session / claims 流程硬接上去。
+    *   第一版重點應放在 `RoleFeed` / `RoleReaction` / `RoleOutfit` 的 owner boundary，以及 `priv` bitmask 對應的 parse / reverse / option / list 呈現 helper，不提前把 `Staff` login side effect 混進 `Role` entity。
+    *   這個 baseline 還必須提供 staff login 可直接消費的最小角色權限映射，例如 authority name 清單、權限 option、`hasAuth` 類 helper；`AuthenticationHandler` 只負責讀取 staff + role 並轉成 claims，不在 handler 內重做 role 規則。
+    *   這一層完成後，再讓 `AuthenticationHandler` 讀取 `tbl_staff` + `tbl_role`，避免「尚未落地 role entity，卻先發明 login / claims abstraction」的承接倒置。
 *   **ReactionBase 預定承接函式群**：
     *   API lifecycle hook：`BeforeReactionAsync()`、`AfterReactionAsync()`、共通 `ExecuteReactionAsync()` wrapper。
     *   JSON envelope helper：成功 / 缺欄 / wrong-data / unverified 的共通 envelope 與 response helper。
@@ -100,14 +105,14 @@
     *   upload / upload_file 這類檔案處理流程，先維持 module-owned 或後續獨立 upload helper，不提前 generic 化進 ReactionBase。
 *   **Task 2.1: Claim-based Auth 中介軟體**
     *   實作自訂的 `AuthenticationHandler`。
-    *   讀取登入者的 `tbl_staff` 狀態與 `tbl_role` 權限代碼，轉化為 `.NET Claims`。
+    *   讀取登入者的 `tbl_staff` 狀態與 `tbl_role` 權限代碼，並透過 `Role` entity 已提供的權限映射轉化為 `.NET Claims`。
 *   **Task 2.2: 權限常數與攔截器 (Action Filters)**
     *   實作 `[OntoAuthorize(PV_U)]` 等屬性標記，能在進入 Controller 前依據 Claims 拒絕越權存取 (回傳 403)。
 *   **Task 2.3: Reaction API 控制器骨架**
     *   建立標準的 JSON 回應格式 (`{ status, data, error }`)。
     *   實作如 `rPost` 的 Controller，負責接收 Request、呼叫 Task 1 完成的 `Feed`，並回傳結果。
     *   第一個 proof 可先用 `OptionReaction` 對 `OptionFeed` 落 `get` / `save`，驗證 entity reaction 只保留 route declaration 與 owner-side feed wiring；共用 flow 則由 `BaseReactionController` + reaction feed contract 承接。
-*   **[驗收點]**：未帶憑證或權限不足的請求呼叫 `Reaction` API 時，會被 Middleware 正確攔截；合法請求能正確觸發 `Feed` 寫入。
+*   **[驗收點]**：未帶憑證或權限不足的請求呼叫 `Reaction` API 時，會被 Middleware 正確攔截；合法請求能正確觸發 `Feed` 寫入；staff 登入後所得到的 claims 應與 `Role` entity 提供的 authority mapping 一致，而不是另一套 handler 私有規則。
 
 #### Stage 3: WorkflowEngine MVP (Kit 工具層)
 **目標**：將狀態機與防禦邏輯移植為無狀態的 C# 領域服務 (Domain Service)。

@@ -45,6 +45,12 @@ FDD 指令是操作入口，不等於 stage 本身。stage 仍以 `idea -> (disc
 - 對應關係：不是某一個 stage，而是所有 stage 的前置入口。
 - 使用時機：開始承接某個 feature、切換到另一個 spec、或 current spec pointer 失效時。
 
+### `FDD Backlog Add`
+- 用途：在 `FDD Focus` 之後，對 current spec 的既有 `idea.md` 正式追加需求、scenario 或 SBE，並判斷這次追加是否需要回到 `(discuss)`、同步 `plan.md` / `check.md`，或改變目前 next step。
+- 對應關係：主要服務 `idea` 與 `(discuss)`，是既有 spec 的需求追加入口，不是新 spec 初始化指令。
+- 使用時機：需求仍屬於 current spec，但需要把新增 requirement / scenario / SBE 正式納入同一份 `idea.md`，而不能只留在對話、`history.md` 或臨時筆記時。
+- 補充限制：這個指令必須帶具體追加內容，不能只送指令名稱；若追加內容其實已跨出 current spec，應停止並改走新 spec 流程，而不是硬塞進同一份 `idea.md`。
+
 ### `FDD Sprint`
 - 用途：依 current spec 的 `history.md`、`plan.md`、`check.md` 推進本輪最小可交付工作。
 - 對應關係：主要服務 `plan`、`(done)`、`check` 之間的實際推進，也可用於承接仍需收斂的 `(discuss)` 後續工作。
@@ -68,6 +74,7 @@ FDD 指令是操作入口，不等於 stage 本身。stage 仍以 `idea -> (disc
 
 ### 總結
 - `FDD Focus`：先決定現在在做哪個 spec。
+- `FDD Backlog Add`：把仍屬於 current spec 的新需求 / scenario / SBE 正式追加進 `idea.md`，並處理是否需要回到 `(discuss)` 或同步 `plan` / `check`。
 - `FDD Sprint`：推進目前 spec 的最小下一步。
 - `FDD Review`：確認目前 spec 的 stage、文件與現況是否一致。
 - `FDD Refactor`：在 drift 已確認後，做局部 bounded refactor，而不是用 generic cleanup 取代 stage 判斷。

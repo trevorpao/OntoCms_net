@@ -5,6 +5,11 @@ public interface IReactionGetFeed<TRow>
     Task<TRow?> GetAsync(int id, CancellationToken cancellationToken = default);
 }
 
+public interface IReactionDeleteFeed
+{
+    Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
+}
+
 public interface IReactionListFeed<TRow>
 {
     Task<FeedPageResult<TRow>> LimitRowsAsync(

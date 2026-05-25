@@ -3,7 +3,7 @@
 ## Build, Test, and Validation
 - Prefer the project's existing Docker environment for validation, smoke scripts, PHP execution, workflow verification, and post-change runtime checks.
 - Use existing `docker compose` services and container paths as the default baseline.
-- For day-to-day .NET web compile checks, prefer `bin/check-web.sh` first. It runs an incremental Docker-based `dotnet build` through the compose `cli` service and is cheaper than rebuilding the web image.
+- For day-to-day .NET web compile checks, prefer `bin/check-web-compile.sh` first. It runs an incremental Docker-based `dotnet build` through the compose `cli` service and is cheaper than rebuilding the web image. `bin/check-web.sh` remains a compatibility wrapper so older docs or habits do not break.
 - Reserve `docker compose --env-file .env -f conf/docker/docker-compose.yml build web` for image/publish validation, Dockerfile changes, or final runtime packaging checks.
 - Only fall back to local PHP when Docker is unavailable or explicitly required.
 

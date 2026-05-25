@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Reflection;
 
 namespace OntoCms.Conventions.HMVC;
 
@@ -87,6 +88,40 @@ public abstract class BaseReactionController : ControllerBase
         return ReactGetAsync(id, feed.GetAsync, cancellationToken);
     }
 
+    protected async Task<IActionResult> ReactDeleteAsync(
+        int id,
+        Func<int, CancellationToken, Task<bool>> deleteAsync,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(deleteAsync);
+
+        return await ExecuteReactionAsync(async token =>
+        {
+            if (!TryGetPositiveId(id, out var normalizedId))
+            {
+                return OkMissing();
+            }
+
+            var deleted = await deleteAsync(normalizedId, token);
+            if (!deleted)
+            {
+                return OkMissing();
+            }
+
+            return OkDone(new { id = normalizedId });
+        }, cancellationToken);
+    }
+
+    protected Task<IActionResult> ReactDeleteAsync(
+        int id,
+        IReactionDeleteFeed feed,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(feed);
+
+        return ReactDeleteAsync(id, feed.DeleteAsync, cancellationToken);
+    }
+
     protected async Task<IActionResult> ReactSaveAsync<TPayload>(
         TPayload payload,
         Func<TPayload, CancellationToken, Task<int>> saveAsync,
@@ -104,6 +139,32 @@ public abstract class BaseReactionController : ControllerBase
         }, cancellationToken);
     }
 
+    protected async Task<IActionResult> ReactSaveAsync<TPayload>(
+        TPayload payload,
+        Func<string, IReadOnlyDictionary<string, IReadOnlyList<string>>> resolveRuleGroup,
+        Func<TPayload, CancellationToken, Task<int>> saveAsync,
+        CancellationToken cancellationToken = default,
+        string ruleGroup = BaseKit.SaveRuleGroupName)
+        where TPayload : class
+    {
+        ArgumentNullException.ThrowIfNull(payload);
+        ArgumentNullException.ThrowIfNull(resolveRuleGroup);
+        ArgumentNullException.ThrowIfNull(saveAsync);
+
+        return await ExecuteReactionAsync(async token =>
+        {
+            var normalizedPayload = await BeforeSaveAsync(payload, token);
+            var validationFailure = ValidateRuleGroup(normalizedPayload, resolveRuleGroup(ruleGroup));
+            if (validationFailure is not null)
+            {
+                return validationFailure;
+            }
+
+            var rowId = await saveAsync(normalizedPayload, token);
+            return OkDone(new { id = rowId });
+        }, cancellationToken);
+    }
+
     protected Task<IActionResult> ReactSaveAsync<TPayload>(
         TPayload payload,
         IFeedRepository<TPayload> feed,
@@ -113,6 +174,19 @@ public abstract class BaseReactionController : ControllerBase
         ArgumentNullException.ThrowIfNull(feed);
 
         return ReactSaveAsync(payload, feed.SaveAsync, cancellationToken);
+    }
+
+    protected Task<IActionResult> ReactSaveAsync<TPayload>(
+        TPayload payload,
+        Func<string, IReadOnlyDictionary<string, IReadOnlyList<string>>> resolveRuleGroup,
+        IFeedRepository<TPayload> feed,
+        CancellationToken cancellationToken = default,
+        string ruleGroup = BaseKit.SaveRuleGroupName)
+        where TPayload : class
+    {
+        ArgumentNullException.ThrowIfNull(feed);
+
+        return ReactSaveAsync(payload, resolveRuleGroup, feed.SaveAsync, cancellationToken, ruleGroup);
     }
 
     protected async Task<IActionResult> ReactListAsync<TRow>(
@@ -296,6 +370,110 @@ public abstract class BaseReactionController : ControllerBase
     protected OkObjectResult OkUnverified(object? data = null, string csrf = "")
     {
         return Ok(Envelope(UnverifiedCode, data ?? Array.Empty<object>(), csrf));
+    }
+
+    protected OkObjectResult? ValidateRuleGroup<TPayload>(
+        TPayload payload,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> rules)
+        where TPayload : class
+    {
+        ArgumentNullException.ThrowIfNull(payload);
+        ArgumentNullException.ThrowIfNull(rules);
+
+        if (rules.Count == 0)
+        {
+            return null;
+        }
+
+        var payloadFields = ExtractPayloadFields(payload);
+        var missingFields = new List<string>();
+        var wrongDataFields = new List<string>();
+        var unsupportedRules = new List<string>();
+
+        foreach (var ruleEntry in rules)
+        {
+            payloadFields.TryGetValue(ruleEntry.Key, out var value);
+            foreach (var rule in ruleEntry.Value)
+            {
+                switch (rule.Trim())
+                {
+                    case "required":
+                        if (IsMissingRequiredValue(value))
+                        {
+                            missingFields.Add(ruleEntry.Key);
+                        }
+
+                        break;
+
+                    case "integer":
+                        if (!IsMissingRequiredValue(value) && !IsIntegerValue(value))
+                        {
+                            wrongDataFields.Add(ruleEntry.Key);
+                        }
+
+                        break;
+
+                    default:
+                        unsupportedRules.Add($"{ruleEntry.Key}:{rule}");
+                        break;
+                }
+            }
+        }
+
+        if (unsupportedRules.Count > 0)
+        {
+            return OkUnverified(new { unsupported_rules = unsupportedRules.Distinct(StringComparer.OrdinalIgnoreCase).ToArray() });
+        }
+
+        if (missingFields.Count > 0)
+        {
+            return OkMissingData(missingFields);
+        }
+
+        if (wrongDataFields.Count > 0)
+        {
+            return OkWrongData(new { fields = wrongDataFields.Distinct(StringComparer.OrdinalIgnoreCase).ToArray() });
+        }
+
+        return null;
+    }
+
+    protected OkObjectResult OkMissingData(IReadOnlyCollection<string> fields, string csrf = "")
+    {
+        return Ok(Envelope(MissingColumnsCode, new { fields = fields }, csrf));
+    }
+
+    private static IReadOnlyDictionary<string, object?> ExtractPayloadFields<TPayload>(TPayload payload)
+        where TPayload : class
+    {
+        return payload
+            .GetType()
+            .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            .Where(static property => property.CanRead)
+            .ToDictionary(
+                property => property.Name,
+                property => property.GetValue(payload),
+                StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static bool IsMissingRequiredValue(object? value)
+    {
+        return value switch
+        {
+            null => true,
+            string stringValue => string.IsNullOrWhiteSpace(stringValue),
+            _ => false,
+        };
+    }
+
+    private static bool IsIntegerValue(object? value)
+    {
+        return value switch
+        {
+            sbyte or byte or short or ushort or int or uint or long or ulong => true,
+            string stringValue => int.TryParse(stringValue.Trim(), out _),
+            _ => false,
+        };
     }
 
     public static ApiEnvelope Envelope(int code, object? data = null, string csrf = "")

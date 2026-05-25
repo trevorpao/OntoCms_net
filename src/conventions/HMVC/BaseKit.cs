@@ -5,6 +5,7 @@ namespace OntoCms.Conventions.HMVC;
 public abstract class BaseKit
 {
     public const string DefaultRuleGroupName = "default";
+    public const string SaveRuleGroupName = "save";
     public const string DeleteRuleGroupName = "del";
     public const string UploadRuleGroupName = "upload";
     public const string UploadFileRuleGroupName = "uploadFile";

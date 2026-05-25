@@ -2,10 +2,10 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-
-echo "bin/check-web.sh is a compatibility wrapper. Use bin/check-web-compile.sh for the Docker-based web compile check." >&2
-exec "$SCRIPT_DIR/check-web-compile.sh"
+CU_DIR="$(cd "$(dirname "$0")" && cd ../ && pwd)"
+ENV_FILE="$CU_DIR/.env"
+COMPOSE_FILE="$CU_DIR/conf/docker/docker-compose.yml"
+PROJECT_NAME="ontocms_net"
 
 docker compose --project-name "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d db cli >/dev/null
 docker compose --project-name "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T cli bash /src/bin/docker-web-check-entrypoint.sh

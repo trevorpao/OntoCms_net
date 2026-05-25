@@ -164,6 +164,28 @@ public abstract class BaseFeedRepository<TPayload> : IFeedRepository<TPayload>
         return await InsertMainRowAsync(connection, columns.Main, transaction, cancellationToken);
     }
 
+    protected async Task<bool> DeleteMainRowAsync(
+        SqlConnection connection,
+        int id,
+        SqlTransaction? transaction = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (id <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(id), "Delete requires a positive id.");
+        }
+
+        var sql = $"DELETE FROM [dbo].[{MainTableName}] WHERE [{PrimaryKeyColumn}] = @Id;";
+        var affectedRows = await connection.ExecuteAsync(new CommandDefinition(
+            sql,
+            new { Id = id },
+            transaction,
+            commandTimeout: 30,
+            cancellationToken: cancellationToken));
+
+        return affectedRows > 0;
+    }
+
     protected async Task SaveMetaAsync(
         SqlConnection connection,
         SqlTransaction transaction,
