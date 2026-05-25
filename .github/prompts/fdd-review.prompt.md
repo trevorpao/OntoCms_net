@@ -15,7 +15,7 @@ Before doing any work, apply these rules:
 4. Treat [document/spec/.current-spec.md](../../document/spec/.current-spec.md) as the single source of truth for the current target spec.
 5. If [document/spec/.current-spec.md](../../document/spec/.current-spec.md) is missing, unreadable, or does not point to a valid spec folder, stop immediately and tell the user to run the appropriate `FDD Focus` command first.
 6. If the task involves F3CMS architecture, terminology, process, or feature continuation, treat the files under [document](../../document) as the primary source of truth instead of making generic framework assumptions.
-7. After reading [document/spec/.current-spec.md](../../document/spec/.current-spec.md), read the resolved target spec's `history.md` first, then use `plan.md` and `check.md` to determine the current stage and expected next step. Do not restart from `idea.md` unless the documents show the earlier stages are incomplete or a premise has been invalidated.
+7. After reading [document/spec/.current-spec.md](../../document/spec/.current-spec.md), read the resolved target spec's `history.md` first, then use `plan.md` and `check.md` to determine the current pending work and expected next step. Do not restart from `idea.md` unless the documents show the earlier stages are incomplete or a premise has been invalidated.
 8. If you inspect runtime validation evidence, prefer the project's existing Docker-based smoke or verification paths over host-only assumptions.
 
 Required review order:
@@ -23,7 +23,7 @@ Required review order:
 1. First read [document/spec/.current-spec.md](../../document/spec/.current-spec.md).
 2. If the pointer file is missing or invalid, stop immediately instead of guessing a spec.
 3. State which files you need to read from the resolved target spec.
-4. Identify the current flow stage from the resolved `history.md` before assessing drift.
+4. Identify the current pending work and next step from the resolved `history.md` before assessing drift.
 5. Check whether the resolved `history.md`, `plan.md`, `check.md`, and, when needed, `idea.md` are still aligned.
 6. Check whether the current code and validation evidence still match the resolved spec documents.
 7. Report findings first, ordered by severity, before proposing any edits.
@@ -32,7 +32,8 @@ Required review order:
 Response expectations:
 
 - Start by confirming which spec folder was resolved from [document/spec/.current-spec.md](../../document/spec/.current-spec.md).
-- Then state the current stage and the review scope.
+- Then state the current pending work and the review scope.
+- Do not declare a final stage label from a single file marker; if the spec still has executable plan items or unchecked check items, report those TODOs directly.
 - Findings must be the primary output.
 - For each finding, say whether it is document drift, stage drift, validation drift, or code-to-spec mismatch.
 - If there are no findings, say that explicitly and mention any remaining documentation gaps or residual risks.

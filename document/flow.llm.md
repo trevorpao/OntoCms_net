@@ -16,6 +16,11 @@
 3. 再讀 `plan.md` 與 `check.md` 確認下一步
 4. 只有在前段未完成或前提失效時才回讀 `idea.md`
 
+### 對外回應口徑
+- 不要因為單一文件寫了 `done` 或某個 stage 名稱，就直接對外宣稱「目前 stage 是 done」
+- 只有在 `plan.md` 已無可執行項、`check.md` 已無待辦且全部驗收項已打勾、並且 `idea.md` / `plan.md` / `check.md` 三者一致時，才可對外回應「目前 spec 已無待辦事項」
+- 若上述條件尚未同時成立，優先回應目前仍有哪些待辦、下一步是什麼；不要主動輸出 stage 名稱作為結論
+
 ### Stage 快速判斷
 - `idea`：需求、範圍、限制、依賴、風險仍未成形，或仍無法用穩定的 example / scenario 說清主要需求
 - `(discuss)`：仍有影響 scope、stage、責任邊界、資料落點或驗收方式的未決議題
@@ -99,6 +104,7 @@
 - 若穩定結論只存在 `history.md`，回寫到 `plan.md` 或 `check.md`
 - 若前提失效，明確指出要回退哪一段文件或哪一個 stage
 - 未處理重要 drift 前，不進入 `(Optimization)`
+- 不要把單一文件中的 stage 標示直接當成對外結論；若要宣稱「已無待辦事項」，必須同時滿足 `plan.md` 無可執行項、`check.md` 無待辦且全打勾、`idea.md` / `plan.md` / `check.md` 一致
 
 ## 7. 禁止事項
 

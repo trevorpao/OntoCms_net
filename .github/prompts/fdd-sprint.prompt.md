@@ -24,7 +24,7 @@ Required execution order:
 1. First read [document/spec/.current-spec.md](../../document/spec/.current-spec.md).
 2. If the pointer file is missing or invalid, stop immediately instead of guessing a spec.
 3. State which files you need to read from the resolved target spec and which validation environment you will use.
-4. Identify the current flow stage from the resolved `history.md` before proposing or making changes.
+4. Use the resolved `history.md` to identify the current pending work and next step before proposing or making changes; do not declare a stage name from a single file marker alone.
 5. If you detect drift between the resolved `history.md`, `plan.md`, `check.md`, and current code, point it out before changing direction.
 6. Keep the work to the smallest valid next step unless the user explicitly asks for a broader scope.
 7. When validation is needed, prefer existing Docker compose services, container paths, smoke scripts, and existing verification routes.
@@ -33,7 +33,8 @@ Required execution order:
 Response expectations:
 
 - Start by confirming which spec folder was resolved from [document/spec/.current-spec.md](../../document/spec/.current-spec.md).
-- Then summarize the current stage and the concrete next step.
+- Then summarize the current pending work and the concrete next step.
+- Do not declare "the current stage is done" unless `plan.md` has no executable items left, `check.md` has no remaining unchecked items, and `idea.md` / `plan.md` / `check.md` are aligned; otherwise describe remaining TODOs instead of a stage label.
 - If relevant, mention the Docker-based validation path you will use.
 - If relevant, mention that database verification is based on `.env`.
 - Do not skip directly to generic implementation if the document flow requires history-first or drift handling.

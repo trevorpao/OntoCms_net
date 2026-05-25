@@ -14,7 +14,7 @@ Before doing any work, apply these rules:
 3. Treat [copilot-instructions.md](../copilot-instructions.md) as the workspace-level always-on ruleset.
 4. Treat [document/spec/.current-spec.md](../../document/spec/.current-spec.md) as the single source of truth for the current target spec.
 5. If [document/spec/.current-spec.md](../../document/spec/.current-spec.md) is missing, unreadable, or does not point to a valid spec folder, stop immediately and tell the user to run the appropriate `FDD Focus` command first.
-6. After reading [document/spec/.current-spec.md](../../document/spec/.current-spec.md), read the resolved target spec's `history.md` first, then use `plan.md` and `check.md` to understand the current stage, latest completed slice, and intended commit scope.
+6. After reading [document/spec/.current-spec.md](../../document/spec/.current-spec.md), read the resolved target spec's `history.md` first, then use `plan.md` and `check.md` to understand the current pending work, latest completed slice, and intended commit scope.
 7. Inspect the current git working tree before proposing a commit message. Use the changed files, the resolved current spec, and the latest documented completion state together; do not invent a commit message from the spec alone.
 8. Treat commit scope as "current spec changes only". If the working tree contains unrelated changes, do not silently include them. Call out the unrelated files and ask whether to exclude them or intentionally include them.
 9. Do not amend an existing commit unless the user explicitly asks for amend behavior.
@@ -37,7 +37,8 @@ Required execution order:
 Response expectations:
 
 - Start by confirming which spec folder was resolved from [document/spec/.current-spec.md](../../document/spec/.current-spec.md).
-- Then summarize the current stage and the latest completed slice from `history.md`, `plan.md`, and `check.md`.
+- Then summarize the current pending work and the latest completed slice from `history.md`, `plan.md`, and `check.md`.
+- Do not declare a final stage label from a single file marker; if the spec still has actionable plan/check items, report those TODOs directly.
 - Clearly separate `in-scope changed files` from `unrelated dirty files`, if any.
 - Propose one primary commit message, and when helpful one shorter alternative.
 - Do not run `git commit` until the user explicitly confirms.

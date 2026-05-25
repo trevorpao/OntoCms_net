@@ -23,7 +23,7 @@ Required execution order:
 
 1. First read [document/spec/.current-spec.md](../../document/spec/.current-spec.md).
 2. Read the resolved target spec's `history.md` first.
-3. Then read its `plan.md` and `check.md` to understand the current stage, latest completed slice, and current next step.
+3. Then read its `plan.md` and `check.md` to understand the current pending work, latest completed slice, and current next step.
 4. Read the resolved target spec's `idea.md` only after that, because this command exists to append to the current requirement basis rather than to restart the whole feature from scratch.
 5. Decide whether the requested addition truly belongs to the current spec or should be split into a different spec.
 6. If the addition belongs to the current spec, update `idea.md` with the new requirement, scenario, or SBE in a way that keeps the requirement basis coherent.
@@ -34,7 +34,8 @@ Required execution order:
 Response expectations:
 
 - Start by confirming which spec folder was resolved from [document/spec/.current-spec.md](../../document/spec/.current-spec.md).
-- Then summarize the current stage and explain that this command will read `history.md`, `plan.md`, `check.md`, and then `idea.md` before making changes.
+- Then summarize the current pending work and explain that this command will read `history.md`, `plan.md`, `check.md`, and then `idea.md` before making changes.
+- Do not declare a final stage label from a single file marker; if the spec still has actionable plan/check items, describe those TODOs instead.
 - Clearly say whether the user's addition appears to belong to the current spec or should become a new spec.
 - If the request lacks the actual appended requirement content, stop and say that `FDD Backlog Add` needs the concrete requirement/SBE text instead of only the command name.
 - After finishing, state which of `idea.md`, `history.md`, `plan.md`, and `check.md` were updated, and whether the current stage changed.
