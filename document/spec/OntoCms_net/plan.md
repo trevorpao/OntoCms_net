@@ -19,6 +19,14 @@
 *   **DTO 與 Schema 欄位映射**：C# 為強型別，若 Request JSON 解析時未能與動態的 `_meta` 或 `_lang` 欄位乾淨脫鉤，容易造成 `Reaction` 層充滿髒 code。
 *   **權限攔截的生命週期**：若 Authorization Middleware 讀取資料庫的頻率過高，將成為效能瓶頸，必須妥善設計 Claims 快取 (Cache) 策略。
 
+### Priority-1 Feature Baseline
+目前 spec 不把「完整 OntoCMS 所有功能」一次攤平成同一波實作，而是先收斂第一優先序功能，作為當前可執行的核心閉環：
+*   **P1-A 內容發布核心**：單頁 / 文章 / 新聞 / 公告 / 專案的共通內容發布基線，以及多語系、封面、版型、上線時間、狀態控管。
+*   **P1-B 導覽整理核心**：分類、標籤、選單階層。
+*   **P1-C 素材與附屬資料核心**：媒體 / 圖片素材、meta 與內容發布直接需要的附屬資料。
+*   **P1-D 後台治理核心**：staff、role、登入 / 憑證、系統選項與共用設定。
+*   **Deferred from P1**：搜尋、作者 / 書籍 / 術語等獨立內容關聯對象、聯絡表單、訂閱資料、廣告管理、追蹤紀錄與其他營運輔助資料，不作為目前第一優先序的前置阻塞項。
+
 ---
 
 ### Stage Plan (實作階段拆解)
@@ -87,6 +95,7 @@
 
 #### Stage 2: 互動與權限治理 (Reaction & Auth 層)
 **目標**：基於舊表建立 C# 權限攔截網，並實作標準的 API 回應層。
+**對應 P1 範圍**：P1-D 後台治理核心，並作為後續 P1-A 內容發布權限控管的前置基線。
 *   **Task 2.0: Role Entity Baseline 先行**
     *   在進入登入 / `AuthenticationHandler` 之前，先參考 PHP 的 `docker-f3cms/www/f3cms/modules/Role` FORKS，建立 `.NET` 版的 `Role` entity baseline，而不是先把 login / session / claims 流程硬接上去。
     *   第一版重點應放在 `RoleFeed` / `RoleReaction` / `RoleOutfit` 的 owner boundary，以及 `priv` bitmask 對應的 parse / reverse / option / list 呈現 helper，不提前把 `Staff` login side effect 混進 `Role` entity。
@@ -134,6 +143,7 @@
 
 #### Stage 4: 頁面渲染與後台選單 (Outfit 層)
 **目標**：結合 Seed Data 產出動態生成的後台/前台框架。
+**對應 P1 範圍**：P1-A 內容發布核心與 P1-B 導覽整理核心。
 *   **OutfitBase 預定承接函式群**：
     *   Route lifecycle hook：`BeforeRouteAsync()`、`AfterRouteAsync()`、共通 `ExecuteOutfitAsync()` wrapper。
     *   Theme render helper：theme view path 組裝與共通 `ThemeView()`。

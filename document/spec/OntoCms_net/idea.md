@@ -23,6 +23,14 @@
 *   **工作流引擎 (WorkflowEngine MVP)**：於 `libs/` 移植核心概念，支援讀取 JSON 定義檔與基礎的狀態切換防護，業務軌跡由各模組自有的 Log 表 (Module-owned log) 承接。
 *   **Schema 轉換與基礎植入 (Migration & Seeding)**：撰寫一次性 DDL 腳本轉換 MySQL 至 MSSQL 型別，並將原 `init.sql` 中的系統選單 (`Menu`)、系統選項 (`Option`)、預設角色 (`Role`) 等最小運作資料移植至新庫。
 
+### 3.1 第一優先序功能 (Priority-1 Feature Baseline)
+當前 spec 應先承接可讓 OntoCMS 成為「可運作 CMS 核心」的第一優先序功能，而不是一次把所有營運補充模組都納入同一波實作。第一優先序如下：
+*   **核心內容發布**：單頁與文章發布，以及以共通內容基線承接新聞、公告、專案內容管理；同時包含多語系內容維護、封面、版型、上線時間與狀態控管。
+*   **核心導覽與整理**：分類、標籤、選單階層，作為內容發布後能被整理、導覽與後台管理的最小結構。
+*   **核心素材與附屬資料**：媒體與圖片素材、額外屬性與 meta 資訊，作為內容發布與頁面呈現的必要附屬能力。
+*   **核心後台治理**：staff 帳號、role 與權限、登入與憑證管理、系統選項與共用設定。
+*   **不列入第一優先序**：搜尋與進階內容關聯、作者/書籍/術語等獨立內容關聯對象、聯絡表單、訂閱資料、廣告管理、追蹤紀錄與其他營運輔助資料。這些功能可列入後續 backlog，但不應先擠進目前的第一優先序閉環。
+
 ### 4. 非範圍 (Non-Scope)
 *   **多站共構機制 (Multi-Site)**：OntoCMS 為等價於 F3CMS 的單站基礎框架，不包含 PetiteCMS 級別的多站點管理、網域路由映射與跨站資料同步。
 *   **重量級 ORM 魔術**：禁止過度依賴 Entity Framework Core 的全自動 Tracking，以保留對關聯查詢的透明度與效能控制。
@@ -53,6 +61,7 @@
 *   *(已決議)* **目標定位**：確認 OntoCMS 為單站基礎 CMS 框架，剝離複雜的多站共構邏輯。
 *   *(已決議)* **認證授權**：捨棄肥重的 ASP.NET Identity，沿用舊有 `tbl_staff` 與 `tbl_role` 結合 Claim-based Auth；其中 staff login 的基本角色權限對應必須以前置的 `Role` entity baseline 為真實來源，不可在 `AuthenticationHandler` 內另造一套 role/permission mapping。
 *   *(已決議)* **資料移轉**：採 Zero Business Data 策略，僅進行 Schema 轉換與 `init.sql` 基礎系統資料 (Seeding) 植入。
+*   *(已決議)* **第一優先序功能範圍**：目前 spec 的第一優先序只承接核心內容發布、核心導覽與整理、核心素材/meta、核心後台治理；搜尋、獨立內容關聯對象、聯絡/訂閱/廣告/追蹤等營運補充能力延後到後續 backlog。
 
 ---
 

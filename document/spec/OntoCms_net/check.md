@@ -117,6 +117,7 @@
 - [x] 最終 HTTPS 驗收入口 `https://loc.f3cms.com:4433/` 與 `https://loc.f3cms.com:4433/api/option/get?id=1` 已驗證可用
 
 ## Open Items
+- [ ] 已將完整 OntoCMS 功能清單收斂為第一優先序功能基線：核心內容發布、核心導覽整理、核心素材/meta、核心後台治理；搜尋、獨立內容關聯對象、聯絡/訂閱/廣告/追蹤等延後到後續 backlog。下一步需把這份 Priority-1 backlog 繼續拆成更明確的 executable slices，而不是一次平推全部模組
 - [x] Stage 1.2 的第一個可驗證行為已定為 `_handleColumn` 欄位分流，而非 audit fields 先行
 - [ ] 若引入第一個 `_lang` 之後還要擴充 FeedBase，下一步應優先補最小 runtime 驗證或第二個 caller，而不是把主表、`_lang`、`_meta` 的寫入順序上推成 generic magic
 - [ ] 若引入 QueryBuilder，需維持薄 where / order / paging 組裝；複雜查詢仍直接寫 SQL，第二選項僅考慮 `SqlKata`

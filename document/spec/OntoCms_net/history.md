@@ -1,5 +1,13 @@
 # OntoCms_net History
 
+### 第 12 輪討論結果
+1. 本輪使用 `FDD Backlog Add` 把「完整 OntoCMS 應具備的功能清單」正式追加回 current spec，但沒有把所有列出的能力都視為同一波必做項，而是先收斂第一優先序功能，避免 backlog 一次擴成無法執行的超大範圍。
+2. 本輪判定這個需求追加仍屬於 [document/spec/OntoCms_net/idea.md](document/spec/OntoCms_net/idea.md) 的同一份 OntoCMS 核心框架 spec，因為它補的是整體功能優先序，而不是另一個獨立 feature。對當前 spec 而言，第一優先序應先包含四塊：A 的核心內容發布、B 的核心導覽整理、C 的核心素材/meta、D 的核心後台治理。
+3. 具體來說，本輪已把第一優先序寫成：單頁/文章/新聞/公告/專案的共通內容發布基線、多語系、封面、版型、上線時間與狀態控管；分類、標籤、選單階層；媒體/圖片素材與 meta；以及 staff / role / login / system option。這些能力共同構成「可運作 CMS 核心」的最小閉環。
+4. 同時，本輪也明確把下列項目排除在當前第一優先序之外：搜尋、作者/書籍/術語等獨立內容關聯對象、聯絡表單、訂閱資料、廣告管理、追蹤紀錄與其他營運輔助資料。這些不會消失，但會留在後續 backlog，而不是現在就壓進同一個 executable plan。
+5. 因此本輪已同步更新 [document/spec/OntoCms_net/idea.md](document/spec/OntoCms_net/idea.md)、[document/spec/OntoCms_net/plan.md](document/spec/OntoCms_net/plan.md) 與 [document/spec/OntoCms_net/check.md](document/spec/OntoCms_net/check.md)：`idea.md` 明確寫下 Priority-1 功能基線，`plan.md` 補上 Priority-1 feature baseline 與各 stage 對應範圍，`check.md` 則新增一條 open item，提醒後續要把這份 P1 backlog 繼續拆成更小的 executable slices。
+6. 這次 backlog 追加改變了當前 spec 的功能優先序描述，但沒有推翻目前已在進行的 owner-boundary 主線；就 immediate next step 而言，仍可維持先補 `AuthenticationHandler` consumption proof，因為它屬於 P1-D 後台治理核心的一部分。
+
 ### 第 11 輪討論結果
 1. 本輪承接第 10 輪已明確收斂的 next step，直接落 `Role` entity baseline 的第一個 `.NET` slice，而不是跳去 `AuthenticationHandler`。範圍維持在最小 read-side proof：先補 `RoleFeed` / `RoleReaction` / `RoleOutfit`，只處理 role 讀取、權限映射與 list / option 呈現，不碰 login side effect。
 2. [src/Modules/Role/feed.cs](src/Modules/Role/feed.cs) 現在已成為 `Role` owner-side baseline：它承接 `tbl_role` 的 `get` / `list` / `get_opts` 讀取，並明確擁有 `priv` bitmask 對應的 authority mapping helper，包括 authority option、authority title/name 展開、`hasAuth()` 與 authority value parse；這一層刻意讓後續 staff login 只能消費 `Role` 的 mapping，而不能在 handler 內重做一套規則。
