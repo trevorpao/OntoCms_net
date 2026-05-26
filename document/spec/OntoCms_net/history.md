@@ -1,5 +1,53 @@
 # OntoCms_net History
 
+### 第 17 輪討論結果
+1. 本輪直接承接第 16 輪鎖定的最小 next step，沒有擴成 generic rerouter，也沒有先跳去 authority filter；實作只聚焦在 `Staff` module 自己的 route-contract resync proof，讓 `/api/staff/{method}` 重新成為對外 contract。
+2. [src/Modules/Staff/reaction.cs](src/Modules/Staff/reaction.cs) 現在已收斂為 module-owned dispatcher：對外用 `GET|HEAD|POST /api/staff/{method}` 承接 `login`、`logout`、`status`、`session`，其中 login 仍維持原本的 account/pwd -> bcrypt verify -> cookie sign-in 流程，但不再透過脫離 module 命名的 `/authenticate`；原本的 [src/Modules/Staff/authenticate.cs](src/Modules/Staff/authenticate.cs) 也已移除。
+3. 這次 resync 仍維持第 16 輪裁定的 owner boundary：`ReactionBase` 沒有被擴成全站 generic rerouter，auth side effect、cookie sign-in/sign-out、status/session payload 與 method dispatch 仍都留在 `Staff` module 內。也就是說，這次 proof 關閉的是 route-contract drift，而不是把 rerouter magic 回推到 shared base。
+4. [src/public/wwwroot/backend/index.html](src/public/wwwroot/backend/index.html) 的 backend login form 也已同步從 `/authenticate?loginredirect=` 改到 `/api/staff/login?loginredirect=`，避免靜態入口繼續指向舊 contract。
+5. 本輪先以 [bin/check-web-compile.sh](bin/check-web-compile.sh) 做 focused compile 驗證，結果通過，仍只有 [src/conventions/HMVC/BaseKit.cs](src/conventions/HMVC/BaseKit.cs) 與 [src/conventions/HMVC/BaseFeedRepository.cs](src/conventions/HMVC/BaseFeedRepository.cs) 兩個既有 warning；接著再用 Docker runtime proof，以臨時 smoke staff 驗證 `POST /api/staff/login` 會簽發 `onto_staff` cookie，`GET /api/staff/status` 會回 `isLogin = 1` 與 user payload，`GET /api/staff/session` 會回 role/authority claims，`POST /api/staff/logout` 會清掉 cookie，最後 `GET /api/staff/status` 回 `isLogin = 0`，且 smoke staff 已從 DB 清理。
+6. 最新討論的下一步選項：
+- route-contract resync 已關閉；下一步回到第一個 authority filter / `[OntoAuthorize(...)]` caller proof，驗證 request-time authorization 直接消費目前 cookie session 上的 role-derived authority claims。
+
+### 第 16 輪討論結果
+1. 本輪不是新增另一條需求，而是對第 15 輪的 routing decision 做明確裁定：使用者已明示 OntoCms 的邏輯由各 module(Entity) 自行決定，`ReactionBase` 只負責建立後台 CRUD 慣例 `{method}`，相鄰 middleware 也可放在各 module 中；因此 current spec 現在正式決定保留 rerouter magic。
+2. 這個決定修正了第 15 輪中「不要回到 PHP 式無限制 rerouter magic」的方向。新的收斂點不是完全放棄 rerouter，而是把它明確界定成 module-owned routing mechanism：對外仍維持 `/api/{module}/{method}`，新增 API method 不需回頭修改集中 route 表；但 auth policy、validation、login/session side effect 與相鄰 middleware 仍由各 module 自行擁有，不上推到 generic `ReactionBase`。
+3. 因此本輪已同步更新 [document/spec/OntoCms_net/idea.md](document/spec/OntoCms_net/idea.md)、[document/spec/OntoCms_net/plan.md](document/spec/OntoCms_net/plan.md) 與 [document/spec/OntoCms_net/check.md](document/spec/OntoCms_net/check.md)：`idea.md` 現在把 rerouter magic 記為已決議的架構規則；`plan.md` 改為由保留的 module-owned rerouter 承接 `/api/{module}/{method}`；`check.md` 則把 current next step 收斂為依這個新決策完成 `Staff` route-contract resync。
+4. 這代表 current spec 沒有回到 generic `ReactionBase` 決定一切的方向，反而更明確地把責任分兩層：shared `ReactionBase` 只保留 CRUD 慣例與 helper，module reaction 自行擁有 rerouter/middleware/business rule。真正待關閉的 drift 也因此更具體：目前 [src/Modules/Staff/authenticate.cs](src/Modules/Staff/authenticate.cs) 還是 `/authenticate`，尚未依這個決策落成 `/api/staff/login`。
+5. 最新討論的下一步選項：
+- 先依新的 rerouter 決策做 `Staff` route-contract resync proof，把 login 對外入口改為 `/api/staff/login`，並補齊 logout/status 等 method 的同一路徑規則。
+- route-contract resync 關閉後，再回到 authority filter / `[OntoAuthorize(...)]` 第一個 caller proof。
+
+### 第 15 輪討論結果
+1. 本輪使用 `FDD Backlog Add` 追加的是 `Staff` reaction API 的外部 route contract，而不是新的獨立 feature；因此這項需求仍屬於 [document/spec/OntoCms_net/idea.md](document/spec/OntoCms_net/idea.md) 的同一份 OntoCms 核心框架 spec，範圍落在 Stage 2 的 `Reaction & Auth` 主線。
+2. 本輪明確參考了 PHP 的 [docker-f3cms/www/f3cms/modules/Staff/reaction.php](docker-f3cms/www/f3cms/modules/Staff/reaction.php) 與 [docker-f3cms/www/f3cms/libs/Reaction.php](docker-f3cms/www/f3cms/libs/Reaction.php)：在舊 F3CMS 中，`rStaff::do_login()` 對外是透過 `GET|HEAD|POST /api/@module/@method = \F3CMS\Reaction->do_rerouter` 呈現成 `/api/staff/login`，而新增 API method 時不需再另外修改一份舊式集中 route 設定。
+3. 這次 backlog 追加改變的不是 claims mapping 或 login business rule，而是 `Staff` reaction 的外部命名契約與 route-extension 規則。因此本輪已把 requirement 回寫到 [document/spec/OntoCms_net/idea.md](document/spec/OntoCms_net/idea.md)：`Staff` 的 reaction API 應對齊舊 F3CMS 的模組/方法 contract，至少以 `login` 為例，對外入口應是 `/api/staff/login`，而不是脫離 module 慣例的 `/authenticate`。
+4. 本輪也同步更新 [document/spec/OntoCms_net/plan.md](document/spec/OntoCms_net/plan.md) 與 [document/spec/OntoCms_net/check.md](document/spec/OntoCms_net/check.md)，因為這次 requirement 追加已直接影響 current next step：既有 Stage 2 原本準備前進到 authority filter proof，但目前程式存在明確 drift，亦即 [src/Modules/Staff/authenticate.cs](src/Modules/Staff/authenticate.cs) 仍使用 `/authenticate`，尚未對齊新的 `/api/staff/login` contract。
+5. 這次追加也迫使 current spec 進行 discuss-side resync：先前文件已決定不把 PHP `Reaction.php::do_rerouter()` 的無限制 dynamic reflection 整包搬進 `.NET` shared layer，但本輪又新增「外部 `/api/{module}/{method}` contract 必須保留、且新增 method 不需回頭修改集中 route 表」的 requirement。這代表下一步要先收斂的是 `.NET` 端如何承接這個 route contract，而不是直接往 `[OntoAuthorize(...)]` proof 推進。
+6. 最新討論的下一步選項：
+- 先做 `Staff` route-contract resync proof，把 login 對外入口改為 `/api/staff/login`，並決定 `.NET` 端要用哪種可維護 routing 策略承接 `/api/{module}/{method}`，同時避免回到 PHP 式無限制 rerouter magic。
+- 在 route-contract resync 關閉後，再回到原本延後的 authority filter / `[OntoAuthorize(...)]` 第一個 caller proof。
+
+### 第 14 輪討論結果
+1. 本輪承接第 13 輪留下的 next step，將 `AuthenticationHandler` 的 header-based claims proof 收斂成真正可持有憑證的最小 staff login path，而不是繼續把 `X-Onto-Staff-Id` 當成長期入口。範圍仍刻意維持在最薄的登入/會話閉環：帳密驗證、cookie 簽入、session claims 回讀。
+2. [src/Modules/Staff/authenticate.cs](src/Modules/Staff/authenticate.cs) 現在已新增 `POST /authenticate`，會從 form 讀取 `Account` / `Pwd`，透過 [src/Modules/Staff/feed.cs](src/Modules/Staff/feed.cs) 依 account 讀取 `tbl_staff + tbl_role`，再用 bcrypt 驗證密碼後簽發 cookie；[src/conventions/Auth/StaffClaimsPrincipalFactory.cs](src/conventions/Auth/StaffClaimsPrincipalFactory.cs) 也被抽出來供登入與既有 header proof 共用，避免 claims 組裝在兩個入口各自維護一份。
+3. [src/public/Program.cs](src/public/Program.cs) 已補上 `StaffCookie` scheme 的 cookie auth registration，並把 API login/access denied redirect 改成直接回 `401/403`；[src/Modules/Staff/reaction.cs](src/Modules/Staff/reaction.cs) 的 `GET /api/staff/session` 也已改成走 cookie scheme，讓 session proof 真正驗到正式登入後的 claims，而不是只驗 header scheme。
+4. 本輪先用 [bin/check-web-compile.sh](bin/check-web-compile.sh) 做 focused compile 驗證；中途只修一個局部 defect： [src/Modules/Staff/authenticate.cs](src/Modules/Staff/authenticate.cs) 的 redirect 判斷用了錯的 `StartsWith` overload，修正後 compile 通過，仍只有 [src/conventions/HMVC/BaseKit.cs](src/conventions/HMVC/BaseKit.cs) 與 [src/conventions/HMVC/BaseFeedRepository.cs](src/conventions/HMVC/BaseFeedRepository.cs) 兩個既有 warning。
+5. 本輪接著做 Docker runtime proof。先確認 repo 靜態 backend page 裡預填的 `1234` 並不是目前 seed hash 的真實密碼，因此沒有把 `trevor/1234` 的 wrong-data 結果誤判成程式缺陷；之後依 `.env` 指向的 `OntoCms` 資料庫，臨時插入一筆已知 bcrypt 密碼的 `Verified` smoke staff，實際驗證 `POST /authenticate` 會回 `code = 1`、`Set-Cookie: onto_staff=...` 與 redirect 資訊，接著 `GET /api/staff/session` 會回 `auth_smoke_cookie / Administrator / role_id = 1` 與五個 authorities，最後再把該 smoke staff 從 DB 刪除。這代表 cookie-based staff login path 已完成最小 end-to-end proof，且 claims 仍直接來自 `Role` mapping。
+6. 最新討論的下一步選項：
+- 先補第一個 authority filter / `[OntoAuthorize(...)]` proof，驗證 request-time authorization 直接消費目前 cookie session 上的 authority claims。
+- 若要先補 session 相鄰 closeout，下一個最小 slice 可補 `logout` 或 staff login 的 footmark / last-login 類 owner-side side effect，但不應回頭把 claims mapping 拉出 `Role` owner boundary。
+
+### 第 13 輪討論結果
+1. 本輪承接第 12 輪已明確鎖定的 next step，直接實作 `AuthenticationHandler` 的最小 consumption proof，而不是提前做完整 staff login / session。重點不是密碼流程，而是驗證 claims 來源是否確實收斂到 `Role` entity 已提供的 authority mapping。
+2. [src/Modules/Staff/feed.cs](src/Modules/Staff/feed.cs) 現在已補上最薄的 `StaffFeed` read-side owner boundary，負責從 `dbo.tbl_staff` 與 `dbo.tbl_role` 讀出 staff 狀態、role title、role priv；[src/conventions/Auth/StaffAuthenticationHandler.cs](src/conventions/Auth/StaffAuthenticationHandler.cs) 則以自訂 `StaffHeader` scheme 讀取 `X-Onto-Staff-Id`，只做最小驗證後直接消費 [src/Modules/Role/feed.cs](src/Modules/Role/feed.cs) 的 authority helper，把 role bitmask 轉成 claims。
+3. [src/public/Program.cs](src/public/Program.cs) 已補上 authentication service registration 與 `UseAuthentication()`；[src/Modules/Staff/reaction.cs](src/Modules/Staff/reaction.cs) 也新增受保護的 `GET /api/staff/session` proof route，用來把 handler 實際產出的 claims 回出來，避免只停留在 compile-level wiring。
+4. 本輪先用 [bin/check-web-compile.sh](bin/check-web-compile.sh) 做 focused compile 驗證；唯一局部 defect 是 [src/public/Program.cs](src/public/Program.cs) 在 top-level registration 少了 `AuthenticationSchemeOptions` 的完整型別名稱，修正後 build 通過，仍只有 [src/conventions/HMVC/BaseKit.cs](src/conventions/HMVC/BaseKit.cs) 與 [src/conventions/HMVC/BaseFeedRepository.cs](src/conventions/HMVC/BaseFeedRepository.cs) 兩個既有 warning。
+5. 本輪接著用 `docker compose --env-file .env -f conf/docker/docker-compose.yml build web && up -d web` 做 runtime proof，再以 `curl -k` 驗證 `GET /api/staff/session`：未帶 `X-Onto-Staff-Id` 時回 `401`；帶 `X-Onto-Staff-Id: 1` 時回 `trevor / Administrator / role_id = 1` 與 `base.cms`、`mgr.cms`、`base.member`、`mgr.member`、`mgr.site` 五個 authorities。這表示 `AuthenticationHandler` 已確實消費 `Role` mapping，而不是 handler 自己維護另一套 permission table。
+6. 最新討論的下一步選項：
+- 先把這個 header-based proof 往真正 staff login path 收斂，例如補帳號/密碼驗證、session 或 cookie 憑證承載，避免 `X-Onto-Staff-Id` 停留為長期入口。
+- 若要往 P1 backlog 主線前進，下一個 executable slice 可開始拆 staff login credential flow 或第一個需要權限攔截的內容管理 caller，但都應繼續直接消費 `Role` entity 的 authority mapping。
+
 ### 第 12 輪討論結果
 1. 本輪使用 `FDD Backlog Add` 把「完整 OntoCMS 應具備的功能清單」正式追加回 current spec，但沒有把所有列出的能力都視為同一波必做項，而是先收斂第一優先序功能，避免 backlog 一次擴成無法執行的超大範圍。
 2. 本輪判定這個需求追加仍屬於 [document/spec/OntoCms_net/idea.md](document/spec/OntoCms_net/idea.md) 的同一份 OntoCMS 核心框架 spec，因為它補的是整體功能優先序，而不是另一個獨立 feature。對當前 spec 而言，第一優先序應先包含四塊：A 的核心內容發布、B 的核心導覽整理、C 的核心素材/meta、D 的核心後台治理。

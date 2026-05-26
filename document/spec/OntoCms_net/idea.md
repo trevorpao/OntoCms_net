@@ -39,6 +39,7 @@
 ### 5. 核心物件與模組邊界 (Core Objects & Module Boundaries)
 系統嚴格遵守 OntoCMS 的核心規範「一個實體對應一個模組」：
 *   **`Staff / Role` (治理模組)**：管理單一 CMS 後台的帳號、權限邊界與認證狀態；其中 `Role` 必須先擁有 `priv` bitmask、權限 option、parse / reverse / hasAuth 等 owner-side helper，`Staff` login 只消費 `Role` 已定義的權限映射，不在登入流程內重做一份 permission 規則。
+*   **`Staff Reaction` API 契約**：`Staff` 後台互動 API 應對齊舊 F3CMS `modules/Staff/reaction.php` 的 external contract，至少包含 `login`、`logout`、`status`、`saveMine` 等主要 surface；以 login 為例，API 入口應為 `/api/staff/login`，而不是額外脫離模組慣例的獨立路徑。這個 contract 由 module-owned rerouter magic 承接，各 module(Entity) 可自行決定其 reaction method 與相鄰 middleware 行為。
 *   **`Feed` (資料生命週期核心類別)**：所有業務模組的資料操作根基，負責攔截並拆解對主表、`_lang` 與 `_meta` 的 CRUD。
 *   **`Menu / Option` (配置模組)**：維持系統的後台導覽與全域參數設定。
 *   **`WorkflowEngine` (工具模組)**：作為無狀態的規則引擎，讀取各模組的 Flow JSON 進行決策，絕不反向干涉業務模組的資料庫 Schema。
@@ -60,6 +61,8 @@
 *   *(已決議)* **命名與精神**：定名為 **OntoCMS**，強調實體優先 (Entity-First) 的架構約束。
 *   *(已決議)* **目標定位**：確認 OntoCMS 為單站基礎 CMS 框架，剝離複雜的多站共構邏輯。
 *   *(已決議)* **認證授權**：捨棄肥重的 ASP.NET Identity，沿用舊有 `tbl_staff` 與 `tbl_role` 結合 Claim-based Auth；其中 staff login 的基本角色權限對應必須以前置的 `Role` entity baseline 為真實來源，不可在 `AuthenticationHandler` 內另造一套 role/permission mapping。
+*   *(已決議)* **Staff API 路由契約**：比照舊 F3CMS `Reaction.php::do_rerouter()` 所提供的模組/方法 API 慣例，OntoCms 對外維持 `/api/{module}/{method}` 形式的 reaction route contract；新增 staff API method 時，不需再要求去改一份舊式集中 route 表才能讓 `/api/staff/{method}` 生效。
+*   *(已決議)* **Rerouter Magic 保留**：OntoCms 保留 rerouter magic，但責任落在 module(Entity)-owned reaction routing，而不是把所有 auth/business rule 推回 generic `ReactionBase`。`ReactionBase` 只建立後台 CRUD 慣例與共用 helper；各 module 可自行決定額外 method 與相鄰 middleware。
 *   *(已決議)* **資料移轉**：採 Zero Business Data 策略，僅進行 Schema 轉換與 `init.sql` 基礎系統資料 (Seeding) 植入。
 *   *(已決議)* **第一優先序功能範圍**：目前 spec 的第一優先序只承接核心內容發布、核心導覽與整理、核心素材/meta、核心後台治理；搜尋、獨立內容關聯對象、聯絡/訂閱/廣告/追蹤等營運補充能力延後到後續 backlog。
 
@@ -87,6 +90,13 @@
 *   **When (當)** 該 staff 成功登入後台，`AuthenticationHandler` 讀取 `tbl_staff` 與對應 `tbl_role`。
 *   **Then (那麼)** 登入流程應使用 `Role` entity 已定義的權限映射，把 role `priv` 轉成 `.NET Claims`，而不是在 handler 內硬編碼 module 權限表。
 *   **And (並且)** 後續 `Reaction` / `Outfit` 的授權判斷應消費同一份 claims / authority 語意，確保 login 與 request-time authorization 來自同一個 role source of truth。
+
+**【情境五】Staff Reaction API 對齊舊 F3CMS 的模組/方法路由契約**
+*說明：驗證 `Staff` 後台 API 的外部入口會維持 `/api/{module}/{method}` 慣例，新增 method 時不需再回頭修改舊式集中 route 設定*。
+*   **Given (假設)** 舊 F3CMS 的 `GET|HEAD|POST /api/@module/@method = \F3CMS\Reaction->do_rerouter` 讓 `rStaff::do_login()` 對外呈現為 `/api/staff/login`。
+*   **When (當)** OntoCms 需要補上 `Staff` 的 `login`、`logout`、`status` 或後續新增其他 reaction method。
+*   **Then (那麼)** 對外 API contract 應維持 `/api/staff/{method}` 形式，避免 login 再落成 `/authenticate` 這類脫離模組命名慣例的獨立入口。
+*   **And (並且)** 新增 `StaffReaction` method 時，不應要求額外修改一份舊式集中 route 表；route extension 應由 `.NET` 端保留的 module-owned rerouter magic 直接承接。
 
 **【情境四】Walking Skeleton 首頁與 Option API 對齊驗證**
 *說明：驗證目前 Stage 0 的最小外部可見路徑已經對齊既定入口，首頁與 API 都以同一筆 `tbl_option` 站台標題為真實來源*。

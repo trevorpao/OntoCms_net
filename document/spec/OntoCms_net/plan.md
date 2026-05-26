@@ -107,10 +107,11 @@
     *   Request normalization helper：`id`、`query` 這類 backend 常用輸入的最薄 normalize / guard helper。
     *   Row / Save hook：`HandleRow()`、`HandleIteratee()`、`BeforeSaveAsync()` 這類可覆寫 hook，讓 entity reaction 只保留 owner-side rule。
     *   Reaction feed contract：建立 `IReactionGetFeed<T>`、`IReactionListFeed<T>`、`IReactionOptionsFeed<T>` 這類最薄 shared contract，讓 `ReactGetAsync()` / `ReactSaveAsync()` / `ReactListAsync()` / `ReactGetOptionsAsync()` 可直接吃 feed-side contract，而不是每個 entity reaction 都重複組 delegate。
-    *   Contract 目標仍是薄接縫，不替 entity 決定 auth policy、validation rule 或 feed method 選擇；shared layer 只負責把 `Reaction.php` 風格的共用 flow 收斂到 ASP.NET Core controller base。
+    *   Contract 目標仍是薄接縫，不替 entity 決定 auth policy、validation rule 或 feed method 選擇；shared layer 只負責把後台 CRUD 慣例與共用 helper 收斂到 ASP.NET Core controller base。
+    *   Staff / module API route contract 需額外對齊舊 F3CMS 的 `/api/{module}/{method}` 外部命名慣例；以 `login` 為例，對外應落在 `/api/staff/login`，且新增 method 時不應再修改一份集中 route 表才能生效。這一層由 module-owned rerouter magic 承接，而不是要求每個 method 額外宣告一條固定 route。
 *   **不應放進 ReactionBase 的函式群**：
     *   entity-specific auth policy、feed method 選擇、validation rule 定義、module reroute 規則。
-    *   `Reaction.php` 裡動態反射 module/method dispatch 的 `do_rerouter()`，不直接搬進 ASP.NET Core；路由解析維持由 framework routing 與 module controller 明確宣告。
+    *   entity-specific middleware、login/session 相鄰 side effect 與非 CRUD method 決策，不上推到 generic `ReactionBase`；保留 rerouter magic 時，這些責任仍維持 module-owned。
     *   upload / upload_file 這類檔案處理流程，先維持 module-owned 或後續獨立 upload helper，不提前 generic 化進 ReactionBase。
 *   **Task 2.1: Claim-based Auth 中介軟體**
     *   實作自訂的 `AuthenticationHandler`。
@@ -121,6 +122,7 @@
     *   建立標準的 JSON 回應格式 (`{ status, data, error }`)。
     *   實作如 `rPost` 的 Controller，負責接收 Request、呼叫 Task 1 完成的 `Feed`，並回傳結果。
     *   第一個 proof 可先用 `OptionReaction` 對 `OptionFeed` 落 `get` / `save`，驗證 entity reaction 只保留 route declaration 與 owner-side feed wiring；共用 flow 則由 `BaseReactionController` + reaction feed contract 承接。
+    *   `Staff` login / logout / status 等 reaction API 的 route-contract resync 已先由 [src/Modules/Staff/reaction.cs](src/Modules/Staff/reaction.cs) 關閉：對外已對齊 `/api/staff/{method}`，並由 module-owned dispatcher 承接，而不是額外維護 `/authenticate` 這類脫離 module 命名的獨立路徑；下一步再回到 authority filter proof。
 *   **[驗收點]**：未帶憑證或權限不足的請求呼叫 `Reaction` API 時，會被 Middleware 正確攔截；合法請求能正確觸發 `Feed` 寫入；staff 登入後所得到的 claims 應與 `Role` entity 提供的 authority mapping 一致，而不是另一套 handler 私有規則。
 
 #### Stage 3: WorkflowEngine MVP (Kit 工具層)
